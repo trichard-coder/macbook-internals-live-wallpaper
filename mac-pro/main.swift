@@ -54,6 +54,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.rebuildWindows() }
     // Surveillance : si le serveur s'arrête (Terminal fermé, plantage), on en relance un.
     Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.ensureServer() }
+    // Cohabitation avec MBA Wallpaper : macOS ne publie pas les notifications de lancement et de
+    // fermeture pour les applications sans icône dans le Dock (LSUIElement). On vérifie donc toutes
+    // les 2 s (coût négligeable) : fond masqué tant que l'Air tourne, rétabli dès qu'elle se ferme.
+    Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+      guard let self else { return }
+      if self.airRunning != self.windows.isEmpty { self.rebuildWindows(); self.refreshMenu() }
+    }
     NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
                                            name: NSApplication.didChangeScreenParametersNotification, object: nil)
     // Lancement ou fermeture de la version Air : pause ou reprise.
@@ -65,8 +72,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
   @objc private func otherAppChanged(_ note: Notification) {
     let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
     guard app?.bundleIdentifier == AIR_BUNDLE_ID else { return }
-    // La liste des applications est mise à jour juste après la notification.
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.rebuildWindows(); self.refreshMenu() }
+    // La liste des applications n'est pas toujours à jour à la réception de la notification :
+    // on revérifie à 0,5 s puis à 2,5 s (la seconde passe ne fait rien si l'état n'a pas changé).
+    for delay in [0.5, 2.5] {
+      DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        if self.airRunning != self.windows.isEmpty { self.rebuildWindows() }
+        self.refreshMenu()
+      }
+    }
   }
 
   func applicationWillTerminate(_ notification: Notification) {

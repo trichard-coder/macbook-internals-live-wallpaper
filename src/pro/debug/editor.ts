@@ -37,6 +37,7 @@ const SLIDERS: [keyof RenderSettings, string, number, number, number][] = [
   ['edges', 'Contours', 0, 2, 0.01],
   ['grain', 'Grain', 0, 0.06, 0.001],
   ['vignette', 'Vignette', 0, 0.8, 0.01],
+  ['aurora', 'Aurore', 0, 0.3, 0.005],
 ];
 
 export function startEditor(r: Renderer, telemetry: TelemetryClient) {
@@ -309,7 +310,7 @@ export function startEditor(r: Renderer, telemetry: TelemetryClient) {
   for (const [key, label, min, max, step] of SLIDERS) {
     const row = document.createElement('div');
     row.className = 'slider';
-    row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${r.settings[key]}"><output>${r.settings[key].toFixed(3)}</output>`;
+    row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${r.settings[key] ?? 0}"><output>${(r.settings[key] ?? 0).toFixed(3)}</output>`;
     const input = row.querySelector('input')!, out = row.querySelector('output')!;
     input.addEventListener('input', () => {
       r.settings[key] = Number(input.value);

@@ -1,4 +1,4 @@
-# Fond d'écran vivant, version MacBook Pro
+# Fond d'écran vivant, moteur WebGL (MacBook Pro et MacBook Air)
 
 Une seule image sombre et monochrome de l'intérieur d'un MacBook Pro, colorisée et animée par le code (WebGL2) selon l'usage réel de la machine : CPU, GPU, mémoire, disque, réseau, batterie, audio, ventilateurs, chaleur.
 
@@ -53,7 +53,7 @@ npm run dev:pro          # serveur Vite sur http://localhost:5174/pro.html (port
 | `theme=rainbow\|warm\|sunset\|mono\|auto` | palette (défaut rainbow ; auto : warm le jour, rainbow la nuit) |
 | `debug=1` | éditeur de zones |
 | `telemetry=<url>\|sim\|off` | source des mesures (sim ou off : simulation locale) |
-| `fps=10..30` | cadence au repos (défaut 24) |
+| `fps=10..60` | cadence au repos (défaut 60, synchronisée sur l'écran) |
 | `quality=0.4..1` | résolution du canevas par rapport aux cartes |
 | `gamma=0.5..1.5` | surcharge du gamma du profil |
 | `motion=reduce` | force le mouvement réduit |
@@ -119,21 +119,72 @@ Sans ce mode, le régime est **estimé** : charge CPU + GPU lissée sur 20 s (un
 
 ## Sobriété énergétique
 
-- 24 i/s au repos, 60 i/s pendant une interaction de l'éditeur, 4 i/s en mouvement réduit (`prefers-reduced-motion`), arrêt complet quand la page est masquée (y compris le flux SSE).
+- 60 i/s synchronisées sur l'écran (une image sur deux sur un écran ProMotion 120 Hz, à intervalle constant), 12 i/s en économie d'énergie, 4 i/s en mouvement réduit (`prefers-reduced-motion`), arrêt complet quand la page est masquée (y compris le flux SSE).
 - Le serveur arrête d'échantillonner 10 s après le départ du dernier client.
 - devicePixelRatio plafonné à 2, et résolution plafonnée à celle des cartes (2880 px).
 - Au repos, le champ émissif et le bloom ne sont recalculés qu'une image sur deux.
 
-Mesures (Chrome headless, build de production, M4 Pro) : environ 7 à 9 % d'un cœur au repos à 24 i/s (dont environ 5 % pour le processus GPU de Chrome, qui présente chaque image), environ 5 % à 12 i/s, environ 3 % en mouvement réduit. Le serveur de télémétrie coûte moins de 1 %. **L'objectif de 5 % n'est donc pas atteint à 24 i/s** dans ces mesures ; l'option « Économie d'énergie » de l'application (12 i/s) s'en approche. La mesure dans le vrai WKWebView reste à faire (la session Air a constaté que les mesures headless sont trompeuses).
+Mesures (Chrome headless, build de production, M4 Pro) : environ 7 à 9 % d'un cœur au repos à 24 i/s (dont environ 5 % pour le processus GPU de Chrome, qui présente chaque image), environ 5 % à 12 i/s, environ 3 % en mouvement réduit. Le serveur de télémétrie coûte moins de 1 %. **L'objectif de 5 % n'est donc pas atteint à 24 i/s** dans ces mesures ; l'option « Économie d'énergie » de l'application (12 i/s) s'en approche. **Mesure dans le vrai WKWebView** (application MBP Wallpaper, écran Retina 120 Hz, après le passage à 60 i/s) : environ 21 % d'un cœur au total (WebContent 5 %, processus GPU 11 %, application 5 %). C'est le prix de la fluidité ; l'option « Économie d'énergie » (12 i/s) reste disponible.
 
 ## Limites connues
 
 - Pas d'interaction souris dans le fond (voulu). Plash, de toute façon, ne transmet pas la souris en mode normal.
 - Régime des ventilateurs estimé sans droits administrateur (pas d'accès SMC sur Apple Silicon).
-- Sur un écran 60 Hz, la cadence de 24 i/s est arrondie à 20 i/s par la synchronisation d'affichage ; sur un écran ProMotion elle est respectée.
+- Les cadences de 30 i/s et plus suivent la synchronisation de l'écran (requestAnimationFrame) ; les cadences plus basses (économie d'énergie) passent par un minuteur et peuvent être moins régulières.
 - Les applications Air et Pro ne doivent pas afficher leur fond en même temps : l'application Pro se met en pause d'elle-même, mais l'application Air n'a pas d'équivalent.
 - Le profil exporté n'est pris en compte par l'application qu'après `npm run build:pro` (elle sert le build).
 
 ## Fichiers
 
 `pro.html`, `src/pro/` (moteur, shaders, signaux, simulation, éditeur), `profiles/pro.json`, `assets/pro/`, `scripts/prepare-pro-image.mjs`, `scripts/build-mac-pro-app.sh`, `mac-pro/`, `server/telemetry-pro.mjs`, `server/profile-pro-io.mjs`, `vite.pro.config.ts`, `tsconfig.pro.json`. Voir aussi [docs/HANDOFF-PRO.md](docs/HANDOFF-PRO.md).
+
+## Refonte visuelle (look « graphite et aurore »)
+
+Le premier rendu avait un aspect un peu rétro, « Matrix » : dominante olive, circuits néon jaunes et verts, motifs numériques. La refonte :
+
+- **Palette** : couleurs système d'Apple (corail, rose, violet, indigo, bleu, cyan), plus de jaune ni de vert phosphore ; fond graphite neutre légèrement froid.
+- **Lumière sur les surfaces** plutôt que sur les arêtes : `detail` 0,4 et `edges` 0,3 dans le profil, contribution des surfaces renforcée dans la composition ; plus de lueur ambiante teintée (`ambientGlow` à 0), qui colorait toutes les pistes.
+- **Plus de motifs numériques** : stockage et réseau miroitent doucement (bruit continu) au lieu de clignoter par blocs, plaques et batteries ondulent lentement au lieu de rayures, la nappe porte quelques comètes lumineuses au lieu de barres.
+- **Bloom plus large** (trois passes de flou) et **aurore** (`aurora` dans le profil) : deux lumières colorées très douces venues des coins, qui dérivent lentement et éclairent le métal.
+- **Grain réduit** à un simple tramage anti-bandes.
+
+## Moteur commun Air et Pro
+
+Le moteur WebGL sert désormais les deux machines. Chaque page déclare son « appareil » (`src/pro/device.ts`) avant de charger le moteur :
+
+| | MacBook Pro | MacBook Air |
+|---|---|---|
+| Page | `pro.html` (`src/pro/entry-pro.ts`) | `air.html` (`src/pro/entry-air.ts`) |
+| Profil de zones | `profiles/pro.json` (31 zones, ventilateurs, caloduc) | `profiles/air.json` (17 zones, pas de ventilateur) |
+| Cartes d'image | `assets/pro/` (image_7) | `assets/air/` (base-dark, image_13) |
+| Application | MBP Wallpaper | MBA Wallpaper |
+
+```sh
+npm run build:air && npm run app        # MacBook Air
+npm run build:pro && npm run app:pro    # MacBook Pro
+```
+
+Les deux pages sont servies par le même serveur (`server/telemetry-pro.mjs`, port 8788), partagé par les deux applications. MBP Wallpaper s'efface tant que MBA Wallpaper tourne (vérification toutes les 2 s : macOS ne publie pas les notifications de lancement pour les applications sans icône dans le Dock).
+
+L'ancienne version Air en Canvas 2D (`index.html`, calques pré-colorés par l'auteur) reste disponible : voir [README-AIR.md](README-AIR.md).
+
+## Masques de forme
+
+Les zones du profil sont des formes géométriques ; les composants réels ont des coins arrondis, des encoches, des formes libres. `scripts/build-masks.mjs` (lancé par `npm run build:pro` et `build:air`, ou `npm run masks`) découpe la forme réelle de chaque zone marquée `refine` dans l'image :
+
+- `"refine": "fill"` : croissance de proche en proche depuis le cœur de la zone (ou depuis la ligne centrale d'un chemin), qui suit les dégradés et s'arrête sur les contours nets (contours épaissis d'un pixel pour boucher les brèches). Les petites régions parasites sont écartées, les trous (textes imprimés) bouchés. Seuil réglable par zone : `"refineEdge"` (28 par défaut).
+- `"refine": "silhouette"` : tout ce qui se détache du fond sombre (carte chargée de composants), trous bouchés, plus grande région.
+- `"maskOf": "<zone>"` : emprunte le masque d'une autre zone (la diffusion de chaleur de l'Air reste dans la plaque).
+
+Le résultat (`assets/<appareil>/zones-mask.png`, un identifiant de zone par canal RGB, trois superpositions possibles) est lu par le shader du champ lumineux avec quatre échantillons par pixel. Un masque n'est utilisé que si la géométrie de sa zone n'a pas changé depuis son calcul : après une modification dans l'éditeur, relancez `npm run masks`. Option `--preview fichier.png` pour contrôler le découpage.
+
+## Premier plan et fondus
+
+- `"above": true` (caloduc) : la forme de la zone, réelle si elle a un masque, masque la lumière des zones situées dessous. Sans cela, la lueur des boîtiers traversait le tube.
+- Les fondus sont entièrement intérieurs : la lumière s'estompe avant le bord et ne sort jamais de sa zone. Les zones qui éclairent une portion de carte (alimentation, stockage, réseau) ont un fondu large (0,022).
+- Les extrémités d'un chemin sont arrondies et dépassent de sa demi-largeur : le départ d'une nappe est reculé d'autant pour coïncider avec l'arrondi réel du câble.
+
+## Transitions
+
+Les niveaux suivent un amortissement critique (ressort sans rebond) : accélération puis décélération, montée en environ 1 s, descente en environ 2 s, au lieu d'un lissage exponentiel qui démarrait sèchement. Les impulsions s'éteignent en 0,9 s.
+

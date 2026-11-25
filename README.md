@@ -23,21 +23,19 @@ The chip glows when the CPU works hard, the battery fills with your charge level
 
 ---
 
-## Two Macs, two engines
+## Two Macs, one engine
+
+Both versions run on the same **WebGL2** engine: a single dark image of the Mac's internals, colorized and animated by shaders. Its look is "graphite and aurora": neutral graphite metal, Apple system colors (coral, pink, purple, indigo, blue, cyan), soft diffuse light and two faint colored glows drifting in from the corners. It runs at 60 frames per second, in sync with the display.
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
 ### MacBook Air
-<img src="docs/images/air-themes.webp" alt="The four themes of the Air version" width="100%">
+<img src="docs/images/air-themes.webp" alt="The four themes of the MacBook Air version" width="100%">
 
-- **Canvas 2D**, seven layers pre-colored by the artist
-- Each component reveals its color through a soft-edged mask
-- Particles along the flex cable, light sweeps, heat spreading
-- No fan, just like the real one: heat radiates through the plate
-
-[Detailed documentation (French) →](README-AIR.md)
+- Fanless, like the real one: heat spreads from the chip into the plate
+- 3 battery cells, flex cable, speaker grilles, Taptic Engine
 
 </td>
 <td width="50%" valign="top">
@@ -45,16 +43,16 @@ The chip glows when the CPU works hard, the battery fills with your charge level
 ### MacBook Pro
 <img src="docs/pro-captures/direct-boucle-cpu.webp" alt="MacBook Pro version under CPU load: glowing heat pipe and fans" width="100%">
 
-- **WebGL2**, a single dark image colorized by shaders
 - Fans spin with the load, smoothed over 20 seconds
-- The heat pipe warms up from the chip to the fins
-- Halos, flickering, data flowing along the flex cables
-
-[Detailed documentation (French) →](README-PRO.md)
+- The heat pipe warms up from the chips to the fins
 
 </td>
 </tr>
 </table>
+
+**Light stays where it belongs.** Real components have rounded corners, notches and free-form outlines, so each zone is clipped to the actual shape of its part, cut out of the image itself. The light never spills onto neighboring parts. The heat pipe sits in front of the chip packages and hides their glow, as it does in the real machine. [Engine documentation (French) →](README-PRO.md)
+
+The original MacBook Air version, drawn in Canvas 2D from the artist's seven pre-colored layers, is still available as a "classic" mode: [documentation (French) →](README-AIR.md)
 
 ## What lights up, and why
 
@@ -90,7 +88,7 @@ npm install
 **MacBook Air version**
 
 ```sh
-npm run build        # builds the page
+npm run build:air    # builds the pages and the shape masks
 npm run app          # compiles and installs ~/Applications/MBA Wallpaper.app
 open -a "MBA Wallpaper"
 ```
@@ -103,7 +101,7 @@ npm run app:pro      # compiles and installs ~/Applications/MBP Wallpaper.app
 open -a "MBP Wallpaper"
 ```
 
-An icon appears in the menu bar: theme, displays, launch at login, quit. The app starts and watches the telemetry server by itself, so there is no need to keep a Terminal open. The Pro app steps aside while the Air app is running, so only one wallpaper is shown at a time.
+An icon appears in the menu bar: theme, displays, power saving (12 frames per second), launch at login, quit. The app starts and watches the telemetry server by itself, so there is no need to keep a Terminal open. The Pro app steps aside while the Air app is running, so only one wallpaper is shown at a time.
 
 <details>
 <summary><b>Why a custom app instead of Plash?</b></summary>
@@ -112,7 +110,7 @@ An icon appears in the menu bar: theme, displays, launch at login, quit. The app
 
 [Plash](https://sindresorhus.com/plash) is the usual tool for showing a web page as your wallpaper, but it is only distributed through the App Store, which rules out Macs without an Apple ID (often work computers). The project therefore ships a minimal replacement (`mac/main.swift`, about 250 lines): one window per display, placed at desktop level, below the icons and click-through, showing the page in a WKWebView. It is compiled on your Mac with `swiftc`.
 
-If you do have Plash, it works too: run `npm run telemetry` (Air, port 8787) or `npm run telemetry:pro` (Pro, port 8788), then add `http://localhost:8787/` or `http://localhost:8788/pro.html` in Plash.
+If you do have Plash, it works too: run `npm run telemetry:pro` (port 8788), then add `http://localhost:8788/air.html` or `http://localhost:8788/pro.html` in Plash.
 
 </details>
 
@@ -134,18 +132,18 @@ Other parameters adjust the frame rate (`?fps=`), the resolution (`?quality=`) o
 
 ```
  macOS commands                 Node.js server                web page                  native app
- (ioreg, pmset, vm_stat,  ──▶   127.0.0.1, no        ──SSE──▶  Canvas 2D (Air)    ──▶   desktop-level window
-  netstat, iostat, ps...)       dependencies, 1 Hz            or WebGL2 (Pro)           (WKWebView)
+ (ioreg, pmset, vm_stat,  ──▶   127.0.0.1, no        ──SSE──▶  WebGL2 engine      ──▶   desktop-level window
+  netstat, iostat, ps...)       dependencies, 1 Hz            air.html / pro.html       (WKWebView)
 ```
 
 - **Privacy first**: the server only listens on `127.0.0.1` and only accepts local pages. No data ever leaves your Mac.
 - **Resilient**: any measurement that fails is replaced, field by field, by a realistic simulation. Without a server, the page simulates everything.
-- **Frugal**: only the zones that change are redrawn, the frame rate adapts (from 6 to 60 frames per second), and everything stops when the page is hidden.
+- **Smooth**: 60 frames per second in sync with the display, and every change eases in and out (critically damped), with no sudden jumps. Everything stops when the page is hidden.
 
 ## Current status, honestly
 
 - ✅ Real measurements, reaction to load, themes, zone editor, native apps.
-- ⚠️ **Idle power use**: the Air version uses about 14 % of one CPU core in the real app, above the 5 % target. The Pro version offers a "Power saving" mode at 12 frames per second. This is the next thing to improve; in the meantime, `?fps=12` or `?quality=0.75` noticeably reduce the load.
+- ⚠️ **Power use**: smoothness has a cost. Measured in the real app at 60 frames per second, each version uses about 21 to 22 % of one CPU core (web content, GPU process and app combined). The "Power saving" menu option (12 frames per second) or `?quality=0.75` reduce it noticeably.
 - Tested on a 14-inch MacBook Pro (M4 Pro) running macOS 26.
 
 ## Project layout
@@ -153,12 +151,11 @@ Other parameters adjust the frame rate (`?fps=`), the resolution (`?quality=`) o
 ```
 mac/, mac-pro/            wallpaper apps (Swift, AppKit + WKWebView)
 server/                   telemetry servers (Node.js, no dependencies)
-src/                      Air version (Canvas 2D)
-src/pro/                  Pro version (WebGL2)
-assets/opt/               Air layers (WebP)
-assets/pro/               Pro image and derived maps
-profiles/pro.json         zones and settings for the Pro version
-scripts/                  image preparation, app compilation
+src/pro/                  WebGL2 engine shared by both Macs (air.html, pro.html)
+profiles/                 zones and settings (air.json, pro.json)
+assets/air/, assets/pro/  images, derived maps and shape masks
+scripts/                  image preparation, shape masks, app compilation
+src/, assets/opt/         classic Air version (Canvas 2D, index.html)
 docs/                     screenshots
 ```
 

@@ -1,0 +1,19 @@
+{
+  "source": "image (13).png",
+  "sourceSize": [
+    2560,
+    1664
+  ],
+  "size": [
+    2560,
+    1664
+  ],
+  "levels": {
+    "black": 9,
+    "white": 125,
+    "median": 27
+  },
+  "detailScale": 2.637,
+  "edgeRef": 111.6,
+  "generated": "2026-11-25T18:06:32.476Z"
+}

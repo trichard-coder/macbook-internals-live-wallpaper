@@ -1,12 +1,14 @@
 // MBA Wallpaper : remplace Plash sans compte Apple.
-// Affiche la page du fond d'écran dans une fenêtre placée au niveau du bureau (sous les icônes),
-// sur chaque écran, transparente aux clics. Démarre le serveur de télémétrie s'il ne tourne pas.
+// Affiche la page du fond d'écran (air.html, moteur WebGL commun avec la version Pro) dans une
+// fenêtre placée au niveau du bureau (sous les icônes), sur chaque écran, transparente aux clics.
+// Démarre le serveur de télémétrie (server/telemetry-pro.mjs, partagé avec MBP Wallpaper) s'il ne
+// tourne pas.
 // PROJECT_DIR et NODE_PATH sont générés par scripts/build-mac-app.sh.
 
 import Cocoa
 import WebKit
 
-let PORT = 8787
+let PORT = 8788
 let LOGIN_AGENT = (NSHomeDirectory() as NSString).appendingPathComponent("Library/LaunchAgents/local.mba-wallpaper.app.plist")
 let THEMES = ["rainbow", "warm", "sunset", "mono", "auto"]
 let THEME_NAMES = ["rainbow": "Arc-en-ciel", "warm": "Chaud", "sunset": "Coucher de soleil", "mono": "Monochrome", "auto": "Automatique (jour / nuit)"]
@@ -32,7 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     get { defaults.object(forKey: "allScreens") as? Bool ?? true }
     set { defaults.set(newValue, forKey: "allScreens") }
   }
-  private var pageURL: URL { URL(string: "http://localhost:\(PORT)/?theme=\(theme)")! }
+  /// Économie d'énergie : cadence réduite à 12 images par seconde (60 par défaut).
+  private var eco: Bool {
+    get { defaults.bool(forKey: "eco") }
+    set { defaults.set(newValue, forKey: "eco") }
+  }
+  private var pageURL: URL { URL(string: "http://localhost:\(PORT)/air.html?theme=\(theme)\(eco ? "&fps=12" : "")")! }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     ensureServer()
@@ -129,7 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     }
     let p = Process()
     p.executableURL = URL(fileURLWithPath: node)
-    p.arguments = [(PROJECT_DIR as NSString).appendingPathComponent("server/telemetry.mjs")]
+    p.arguments = [(PROJECT_DIR as NSString).appendingPathComponent("server/telemetry-pro.mjs")]
     p.currentDirectoryURL = URL(fileURLWithPath: PROJECT_DIR)
     var env = ProcessInfo.processInfo.environment
     env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin"
@@ -179,6 +186,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     screensItem.state = allScreens ? .on : .off
     menu.addItem(screensItem)
 
+    let ecoItem = NSMenuItem(title: "Économie d'énergie (12 i/s)", action: #selector(toggleEco), keyEquivalent: "")
+    ecoItem.target = self
+    ecoItem.state = eco ? .on : .off
+    menu.addItem(ecoItem)
+
     let loginItem = NSMenuItem(title: "Ouvrir à l'ouverture de session", action: #selector(toggleLogin), keyEquivalent: "")
     loginItem.target = self
     loginItem.state = FileManager.default.fileExists(atPath: LOGIN_AGENT) ? .on : .off
@@ -201,6 +213,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
   @objc private func chooseTheme(_ sender: NSMenuItem) {
     guard let t = sender.representedObject as? String else { return }
     theme = t
+    reloadAll()
+    refreshMenu()
+  }
+
+  @objc private func toggleEco() {
+    eco.toggle()
     reloadAll()
     refreshMenu()
   }
@@ -233,7 +251,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
   @objc private func reloadAction() { ensureServer(); reloadAll() }
 
   @objc private func openEditor() {
-    NSWorkspace.shared.open(URL(string: "http://localhost:\(PORT)/?debug=1&theme=\(theme)")!)
+    NSWorkspace.shared.open(URL(string: "http://localhost:\(PORT)/air.html?debug=1&theme=\(theme)")!)
   }
 
   @objc private func quitAction() { NSApp.terminate(nil) }

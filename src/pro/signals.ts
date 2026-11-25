@@ -69,7 +69,7 @@ export class SignalModel {
     const day = daylight(now);
     const empty: Record<SignalName, number> = {
       cpu: 0, gpu: 0, mem: 0, fan: 0.12, heat: 0, exhaust: 0, power: 0, io: 0, net: 0,
-      battery: 0, activity: 0, audio: 0, ac: 0, day, none: 0,
+      battery: 0, activity: 0, audio: 0, ac: 0, day, soc: 0, input: 0, none: 0,
     };
     if (!s) {
       return { values: empty, battery: { present: false, level: 0, charging: false, ac: false, low: false },
@@ -107,7 +107,10 @@ export class SignalModel {
       cpu, gpu, mem: memPressure, fan, heat, exhaust, power, io, net,
       battery: b.present ? b.level : 0, activity,
       audio: audioOn ? 0.3 + 0.7 * s.audio.volume : 0,
-      ac: b.ac ? 1 : 0, day, none: 0,
+      ac: b.ac ? 1 : 0, day, soc,
+      // Activité clavier / trackpad : 1 en cours d'utilisation, s'éteint en quelques secondes.
+      input: s.input && Number.isFinite(s.input.idleSec) ? Math.exp(-Math.max(0, s.input.idleSec - 0.5) / 2.5) : 0,
+      none: 0,
     };
 
     const sourceText: Record<string, string> = { system: 'mesure système', battery: 'tension x courant', 'cpu-proxy': 'estimation', powermetrics: 'powermetrics', sim: 'simulé' };
@@ -127,6 +130,8 @@ export class SignalModel {
       audio: `${s.audio.playing ? 'Lecture audio' : 'Silence'} · volume ${pct(s.audio.volume)}${s.audio.muted ? ' (muet)' : ''}${tag('audio')}`,
       ac: (b.ac ? 'Adaptateur secteur branché' : 'Adaptateur débranché') + tag('battery'),
       day: `${day > 0.5 ? 'Mode jour' : 'Mode nuit'} · ${hh}:${mm}`,
+      soc: `Puce ${pct(soc)} · CPU ${pct(s.cpu.avg)} · GPU ${pct(s.gpu)}${tag('cpu')}`,
+      input: s.input ? `Dernière action il y a ${s.input.idleSec < 1 ? 'moins d\'une seconde' : `${Math.round(s.input.idleSec)} s`}` : 'Activité inconnue',
     };
 
     return {

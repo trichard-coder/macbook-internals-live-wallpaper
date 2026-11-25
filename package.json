@@ -15,9 +15,12 @@
     "app": "sh scripts/build-mac-app.sh",
     "prepare:pro": "node scripts/prepare-pro-image.mjs",
     "dev:pro": "vite --config vite.pro.config.ts --port 5174 --strictPort",
-    "build:pro": "node scripts/prepare-pro-image.mjs && tsc -p tsconfig.pro.json && vite build --config vite.pro.config.ts && vite build --config vite.pro.config.ts --mode single",
+    "build:pro": "node scripts/prepare-pro-image.mjs && node scripts/prepare-pro-image.mjs --air && npm run masks && tsc -p tsconfig.pro.json && vite build --config vite.pro.config.ts && WALL_DEVICE=pro vite build --config vite.pro.config.ts --mode single",
     "telemetry:pro": "node server/telemetry-pro.mjs",
-    "app:pro": "sh scripts/build-mac-pro-app.sh"
+    "app:pro": "sh scripts/build-mac-pro-app.sh",
+    "build:air": "node scripts/prepare-pro-image.mjs && node scripts/prepare-pro-image.mjs --air && npm run masks && tsc -p tsconfig.pro.json && vite build --config vite.pro.config.ts && WALL_DEVICE=air vite build --config vite.pro.config.ts --mode single",
+    "prepare:air": "node scripts/prepare-pro-image.mjs --air",
+    "masks": "node scripts/build-masks.mjs && node scripts/build-masks.mjs --air"
   },
   "devDependencies": {
     "@types/node": "^26.6.10",

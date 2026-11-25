@@ -4,11 +4,8 @@
 // - Cadence adaptative : 60 i/s pendant une interaction, 24 à 30 i/s au repos, quelques images
 //   par seconde en mouvement réduit, arrêt complet quand la page est masquée.
 
-import lumUrl from '../../assets/pro/lum.webp';
-import detailUrl from '../../assets/pro/detail.webp';
-import edgesUrl from '../../assets/pro/edges.webp';
-import meta from '../../assets/pro/meta.json';
 import { config } from './config';
+import { device } from './device';
 import { dropTarget, loadImage, program, target, texture, type Program, type Target } from './gl';
 import { ASPECT, normalizeZone, zoneArea, zoneContains } from './profile';
 import { EFFECT_ID, FS_BLUR, FS_BRIGHT, FS_COMP, FS_FIELD, FS_PACK, KIND_ID, MAXPOLY, MAXRIPPLE, MAXSEG, MAXZ, VS } from './shaders';
@@ -24,6 +21,8 @@ export interface ZoneRT {
   hover: number;
   hoverTarget: number;
   impulse: number;
+  /** Vitesse du niveau (amortissement critique : départ et arrivée en douceur). */
+  vel: number;
   phase: number;
   aux: number;
   flagA: number;
@@ -33,6 +32,20 @@ export interface ZoneRT {
 interface Ripple { x: number; y: number; age: number; strength: number }
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+
+/**
+ * Amortissement critique (ressort sans rebond) : contrairement au lissage exponentiel, la valeur
+ * accélère puis ralentit, sans démarrage sec. smooth : temps caractéristique en secondes.
+ */
+function smoothDamp(cur: number, target: number, vel: number, smooth: number, dt: number): [number, number] {
+  const omega = 2 / Math.max(1e-3, smooth), x = omega * dt;
+  const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = cur - target, temp = (vel + omega * change) * dt;
+  let out = target + (change + temp) * exp;
+  let v = (vel - omega * temp) * exp;
+  if ((target - cur > 0) === (out > target)) { out = target; v = 0; } // pas de dépassement
+  return [out, v];
+}
 
 /** Vitesse de phase de chaque effet (unités par seconde) en fonction du niveau. */
 function phaseSpeed(effect: ZoneDef['effect'], L: number, z: ZoneRT): number {
@@ -86,7 +99,7 @@ export class Renderer {
   private ready = false;
   private geo = {
     rect: new Float32Array(MAXZ * 4), param: new Float32Array(MAXZ * 4), geom: new Float32Array(MAXZ * 4),
-    state: new Float32Array(MAXZ * 4), anim: new Float32Array(MAXZ * 4),
+    state: new Float32Array(MAXZ * 4), anim: new Float32Array(MAXZ * 4), mask: new Float32Array(MAXZ),
     seg: new Float32Array(MAXSEG * 4), segInfo: new Float32Array(MAXSEG * 4), poly: new Float32Array(MAXPOLY * 2),
     ripple: new Float32Array(MAXRIPPLE * 4),
   };
@@ -94,8 +107,12 @@ export class Renderer {
   /** Uniformes statiques (formes, chemins) à renvoyer au GPU. */
   private geoDirty = true;
   private frameNo = 0;
-  private levels: [number, number] = [meta.levels.black / 255, meta.levels.white / 255];
-  private mapSize: [number, number] = [meta.size[0], meta.size[1]];
+  private levels: [number, number] = [device().meta.levels.black / 255, device().meta.levels.white / 255];
+  private mapSize: [number, number] = [device().meta.size[0], device().meta.size[1]];
+  private maskTex: WebGLTexture | null = null;
+  private maskTexel: [number, number] = [0, 0];
+  /** Nombre de cellules de batterie (remplies l'une après l'autre). */
+  private batteryCells = 1;
 
   constructor(readonly canvas: HTMLCanvasElement, profile: Profile, theme: Theme) {
     const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: 'low-power', preserveDrawingBuffer: config.still });
@@ -126,9 +143,26 @@ export class Renderer {
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    const [lum, det, edg] = await Promise.all([loadImage(lumUrl), loadImage(detailUrl), loadImage(edgesUrl)]);
+    const { maps } = device();
+    const [lum, det, edg] = await Promise.all([loadImage(maps.lum), loadImage(maps.detail), loadImage(maps.edges)]);
     this.mapSize = [lum.naturalWidth, lum.naturalHeight];
     this.buildMaps([lum, det, edg]);
+    const mk = device().mask;
+    if (mk) {
+      try {
+        const img = await loadImage(mk.url);
+        // Identifiants, pas des couleurs : filtrage au plus proche, aucune conversion.
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+        const t = texture(gl, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+        this.maskTex = t;
+        this.maskTexel = [1 / img.naturalWidth, 1 / img.naturalHeight];
+      } catch (e) { console.warn('Masques de forme indisponibles :', (e as Error).message); }
+      this.buildGeometry(); // les identifiants de masque dépendent de la texture chargée
+    }
     this.uploadRamp();
     this.geoDirty = true;
     this.ready = true;
@@ -186,7 +220,7 @@ export class Renderer {
     this.zones = defs.slice(0, MAXZ).map((d) => {
       const def = normalizeZone(structuredClone(d));
       const o = prev.get(d.id);
-      return o ? { ...o, def } : { def, level: 0, target: 0, forced: null, hover: 0, hoverTarget: 0, impulse: 0, phase: Math.random() * 10, aux: 0, flagA: 0, flagB: 0 };
+      return o ? { ...o, def } : { def, level: 0, target: 0, forced: null, hover: 0, hoverTarget: 0, impulse: 0, vel: 0, phase: Math.random() * 10, aux: 0, flagA: 0, flagB: 0 };
     });
     this.profile.zones = this.zones.map((z) => z.def);
     this.buildGeometry();
@@ -211,7 +245,16 @@ export class Renderer {
   /** Remplit les tableaux d'uniformes statiques (formes, chemins, polygones). */
   private buildGeometry() {
     const g = this.geo;
-    g.rect.fill(0); g.param.fill(0); g.geom.fill(0); g.seg.fill(0); g.segInfo.fill(0); g.poly.fill(0);
+    g.rect.fill(0); g.param.fill(0); g.geom.fill(0); g.seg.fill(0); g.segInfo.fill(0); g.poly.fill(0); g.mask.fill(0);
+    // Masque de forme : utilisé seulement si la géométrie de la zone n'a pas changé depuis son calcul.
+    const maskIdx = device().mask?.index.zones ?? {};
+    this.zones.forEach((z, i) => {
+      const d = z.def.maskOf ? this.zones.find((o) => o.def.id === z.def.maskOf)?.def : z.def;
+      if (!d) return;
+      const m = maskIdx[d.id];
+      const geom = JSON.stringify({ kind: d.kind, rect: d.rect, inner: d.inner ?? null, circle: d.circle ?? null, path: d.path ?? null, width: d.width ?? null, polygon: d.polygon ?? null });
+      if (m && m.geom === geom && this.maskTex) g.mask[i] = m.id;
+    });
     let seg = 0, poly = 0;
     const W = (p: NPoint): NPoint => [p[0], p[1] * ASPECT];
     this.zones.forEach((z, i) => {
@@ -252,6 +295,7 @@ export class Renderer {
       g.param.set([EFFECT_ID[d.effect] ?? 0, kind, d.feather ?? 0.004, aux], i * 4);
     });
     this.zoneCount = this.zones.length;
+    this.batteryCells = Math.max(1, ...this.zones.filter((z) => z.def.effect === 'battery').map((z) => (z.def.cell ?? 0) + 1));
     this.geoDirty = true;
   }
 
@@ -347,6 +391,10 @@ export class Renderer {
     if (this.hidden || !this.ready || this.raf || this.timer) return;
     const now = performance.now();
     const interval = this.frameInterval(now);
+    // Dès 30 i/s, la boucle suit le rafraîchissement de l'écran (requestAnimationFrame) :
+    // les images tombent sur la synchronisation verticale, sans à-coups. Les cadences plus basses
+    // (économie d'énergie) passent par un minuteur.
+    if (interval <= 1000 / 29) { this.raf = requestAnimationFrame((t) => this.frame(t)); return; }
     const wait = Math.max(0, interval - (now - this.lastFrame) - 2);
     if (wait < 4) this.raf = requestAnimationFrame((t) => this.frame(t));
     else this.timer = window.setTimeout(() => { this.timer = 0; this.raf = requestAnimationFrame((t) => this.frame(t)); }, wait);
@@ -362,6 +410,12 @@ export class Renderer {
   private frame(t: number) {
     this.raf = 0;
     if (this.hidden || !this.ready) return;
+    // Écran 120 Hz et cible 60 i/s : une image sur deux, à intervalle constant.
+    const interval = this.frameInterval(t);
+    if (this.lastFrame && interval <= 1000 / 29 && t - this.lastFrame < interval - 3) {
+      this.raf = requestAnimationFrame((tt) => this.frame(tt));
+      return;
+    }
     const dt = this.lastFrame ? Math.min(0.1, (t - this.lastFrame) / 1000) : 1 / 30;
     this.lastFrame = t;
     const t0 = performance.now();
@@ -390,13 +444,15 @@ export class Renderer {
       let target = sig?.values[name] ?? 0;
       if (z.forced != null) target = z.forced;
       z.target = target;
-      const tau = z.def.effect === 'battery' || z.def.effect === 'control' ? 1.5 : target > z.level ? 0.35 : 2.2;
-      z.level += (target - z.level) * (config.still ? 1 : 1 - Math.exp(-dt / tau));
+      // Montée en ~1 s et descente en ~2 s, avec accélération et décélération (pas d'à-coup).
+      const smooth = z.def.effect === 'battery' || z.def.effect === 'control' ? 1.6 : target > z.level ? 0.9 : 1.8;
+      if (config.still) { z.level = target; z.vel = 0; }
+      else [z.level, z.vel] = smoothDamp(z.level, target, z.vel ?? 0, smooth, dt);
       z.hover += (z.hoverTarget - z.hover) * (1 - Math.exp(-dt / 0.15));
-      z.impulse *= Math.exp(-dt / 0.6);
+      z.impulse *= Math.exp(-dt / 0.9);
       if (z.impulse < 0.002) z.impulse = 0;
       if (z.def.effect === 'battery') {
-        z.aux = clamp01(z.level * 6 - (z.def.cell ?? 0));
+        z.aux = clamp01(z.level * this.batteryCells - (z.def.cell ?? 0));
         z.flagA = b?.charging ? 1 : 0;
         z.flagB = b?.low && z.forced == null ? 1 : 0;
       }
@@ -425,8 +481,9 @@ export class Renderer {
     const fieldOut = this.floatOk ? 1 : 0.25;
 
     this.zones.forEach((z, i) => {
-      g.state.set([z.level, z.hover, z.impulse, z.aux], i * 4);
-      g.anim.set([z.phase, z.flagA, z.flagB, 0], i * 4);
+      // gain : atténuation propre à la zone (zone parente discrète, par exemple).
+      g.state.set([z.level * (z.def.gain ?? 1), z.hover, z.impulse, z.aux], i * 4);
+      g.anim.set([z.phase, z.flagA, z.flagB, z.def.above ? 1 : 0], i * 4);
     });
     g.ripple.fill(0);
     this.ripples.forEach((r, i) => g.ripple.set([r.x, r.y, r.age, r.strength], i * 4));
@@ -439,8 +496,10 @@ export class Renderer {
 
     // Au repos, le champ émissif et le bloom (basse fréquence) ne sont recalculés qu'une image
     // sur deux ; les ventilateurs et la composition restent à pleine cadence.
-    const idle = !config.still && performance.now() >= this.interactiveUntil;
-    const refresh = !idle || this.geoDirty || this.frameNo++ % 2 === 0;
+    // En économie d'énergie (cadence < 30 i/s), le champ émissif et le bloom ne sont recalculés
+    // qu'une image sur deux ; sinon à chaque image, pour des lumières parfaitement fluides.
+    const eco = !config.still && config.idleFps < 30 && performance.now() >= this.interactiveUntil;
+    const refresh = !eco || this.geoDirty || this.frameNo++ % 2 === 0;
     let p = this.progs.comp;
     if (refresh) {
       // 1. champ émissif
@@ -462,6 +521,10 @@ export class Renderer {
       }
       gl.uniform4fv(p.u.uZState, g.state);
       gl.uniform4fv(p.u.uZAnim, g.anim);
+      gl.uniform1fv(p.u.uZMask, g.mask);
+      gl.uniform1f(p.u.uHasMask, this.maskTex ? 1 : 0);
+      gl.uniform2fv(p.u.uMaskTexel, this.maskTexel);
+      if (this.maskTex) bindTex(p, 'uZoneMask', this.maskTex, 1);
       gl.uniform4fv(p.u.uRipple, g.ripple);
       gl.uniform1i(p.u.uRippleCount, this.ripples.length);
       gl.uniform1f(p.u.uTime, this.time);
@@ -484,12 +547,12 @@ export class Renderer {
       gl.uniform2fv(p.u.uLevels, this.levels);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      // 3. flou séparable (deux allers-retours pour un halo large)
+      // 3. flou séparable (trois allers-retours : halo large et diffus, lumière « studio »)
       p = this.progs.blur;
       gl.useProgram(p.prog);
       gl.uniform4fv(p.u.uCover, cover);
-      for (let k = 0; k < 2; k++) {
-        const spread = k === 0 ? 1.2 : 2.6;
+      for (let k = 0; k < 3; k++) {
+        const spread = [1.2, 2.6, 4.8][k];
         gl.bindFramebuffer(gl.FRAMEBUFFER, bloomB.fb);
         bindTex(p, 'uSrc', bloomA.tex, 0);
         gl.uniform2f(p.u.uDir, spread / field.w, 0);
@@ -521,6 +584,8 @@ export class Renderer {
     gl.uniform1f(p.u.uIn, 1 / fieldOut);
     gl.uniform1f(p.u.uGrain, s.grain);
     gl.uniform1f(p.u.uVignette, s.vignette);
+    gl.uniform1f(p.u.uAurora, s.aurora ?? 0.06);
+    gl.uniform1f(p.u.uMotionK, this.motion && !config.still ? 1 : 0);
     gl.uniform1f(p.u.uTime, this.time);
     gl.uniform1f(p.u.uAspect, ASPECT);
     const fan = new Float32Array(8), blur = new Float32Array(8);
@@ -529,9 +594,10 @@ export class Renderer {
       const c = z?.def.circle;
       if (!c) return;
       fan.set([c.c[0], c.c[1] * ASPECT, c.blades, f.angle], k * 4);
-      // Flou de rotation : arc parcouru pendant ~1/30 s, plafonné.
+      // Flou de rotation : arc parcouru pendant la durée d'une image (obturateur à 180°), plafonné.
       const omega = 2 * Math.PI * (0.12 + 5.5 * Math.pow(f.level, 1.3));
-      const arc = this.motion ? Math.min(1.5, omega / 30) : 0;
+      const shutter = 0.5 * Math.min(1 / 24, this.frameInterval(performance.now()) / 1000);
+      const arc = this.motion ? Math.min(1.5, omega * shutter) : 0;
       blur.set([arc, Math.max(1, Math.min(16, Math.ceil(arc / 0.07))), 0, 0], k * 4);
     });
     gl.uniform4fv(p.u.uFan, fan);

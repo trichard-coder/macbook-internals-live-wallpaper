@@ -1,4 +1,6 @@
-# MacBook Air, fond d'écran vivant
+# MacBook Air, version classique (Canvas 2D)
+
+> **Note.** La version MacBook Air par défaut tourne désormais sur le moteur WebGL commun avec la version Pro (`air.html`, `npm run build:air`, application MBA Wallpaper) : voir [README-PRO.md](README-PRO.md). Ce document décrit la version d'origine en Canvas 2D (`index.html`), qui révèle les sept calques pré-colorés par l'auteur ; elle reste disponible avec `npm run build` puis `npm run telemetry` (port 8787).
 
 > Illustrations : © [Basic Apple Guy](https://www.basicappleguy.com/basicappleblog/m4-macbook-air-internals-13-inch). Le dépôt fournit les calques optimisés (`assets/opt/*.webp`), suffisants pour tout construire. Les PNG originaux (`assets/src/`) ne sont pas versionnés : téléchargez-les sur son blog si vous voulez relancer `npm run analyze-images` ou régénérer les WebP. Retour au [README principal](README.md).
 

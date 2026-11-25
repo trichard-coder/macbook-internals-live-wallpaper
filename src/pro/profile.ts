@@ -1,39 +1,36 @@
-// Chargement du profil (profiles/pro.json) et géométrie des zones.
+// Chargement du profil de l'appareil (profiles/pro.json ou profiles/air.json) et géométrie des zones.
 // Les modifications faites dans l'éditeur restent en localStorage tant qu'elles ne sont pas
 // exportées ; la surcharge est ignorée si le fichier embarqué a changé entre-temps.
 
-import bundled from '../../profiles/pro.json';
+import { ASPECT, device, storagePrefix } from './device';
 import type { NPoint, NRect, Profile, ZoneDef } from './types';
 
-const KEY = 'mbp-wallpaper.profile';
-const bundledProfile = bundled as unknown as Profile;
-const signature = JSON.stringify(bundledProfile);
-
-/** Hauteur / largeur de l'image : convertit les y normalisés en « unités de largeur ». */
-export const ASPECT = bundledProfile.image.height / bundledProfile.image.width;
+export { ASPECT };
+const KEY = () => `${storagePrefix()}.profile`;
+const signature = () => JSON.stringify(device().profile);
 
 export function loadProfile(): Profile {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY());
     if (raw) {
       const o = JSON.parse(raw) as { base: string; profile: Profile };
-      if (o.base === signature && Array.isArray(o.profile?.zones)) return o.profile;
-      localStorage.removeItem(KEY);
+      if (o.base === signature() && Array.isArray(o.profile?.zones)) return o.profile;
+      localStorage.removeItem(KEY());
     }
   } catch { /* localStorage indisponible (file://) : profil embarqué */ }
   return bundledProfileCopy();
 }
 
 export function bundledProfileCopy(): Profile {
-  return structuredClone(bundledProfile);
+  return structuredClone(device().profile);
 }
 
 export function saveProfileOverride(p: Profile): void {
-  try { localStorage.setItem(KEY, JSON.stringify({ base: signature, profile: p })); } catch { /* ignoré */ }
+  try { localStorage.setItem(KEY(), JSON.stringify({ base: signature(), profile: p })); } catch { /* ignoré */ }
 }
 
 export function clearProfileOverride(): void {
-  try { localStorage.removeItem(KEY); } catch { /* ignoré */ }
+  try { localStorage.removeItem(KEY()); } catch { /* ignoré */ }
 }
 
 const r4 = (x: number) => Math.round(x * 10000) / 10000;

@@ -1,14 +1,17 @@
 #!/usr/bin/env node
-// Préparation de l'image MacBook Pro (suffixe image_7) pour le moteur WebGL2.
-// Produit dans assets/pro :
+// Préparation d'une image d'appareil pour le moteur WebGL2.
+//   MacBook Pro : image sombre « image_7 », sorties dans assets/pro
+//   MacBook Air (--air) : image sombre « base-dark » (image_13), sorties dans assets/air
+// Produit :
 //   base.webp    version couleur optimisée (largeur max 2880 px)
 //   lum.webp     luminance (niveaux de gris)
 //   detail.webp  carte de détails (passe-haut signé, 128 = neutre)
 //   edges.webp   carte de contours (Sobel)
 //   meta.json    dimensions et statistiques (points noir et blanc conseillés)
-// L'image source n'est jamais modifiée : elle est copiée telle quelle dans assets/pro/src/.
+// L'image source n'est jamais modifiée : elle est copiée telle quelle dans assets/<appareil>/src/.
+// Si la source est introuvable mais que les cartes existent déjà (dépôt cloné), rien n'est fait.
 //
-// Usage : node scripts/prepare-pro-image.mjs [chemin/vers/image_7.png] [--force]
+// Usage : node scripts/prepare-pro-image.mjs [--air] [chemin/vers/image.png] [--force]
 
 import sharp from 'sharp';
 import { copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises';
@@ -18,16 +21,19 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = path.join(root, 'assets/pro');
-const CACHE = path.join(OUT, 'src/image_7.png');
-const MAX_W = 2880;
 const argv = process.argv.slice(2);
+const AIR = argv.includes('--air');
+const OUT = path.join(root, AIR ? 'assets/air' : 'assets/pro');
+const CACHE = path.join(OUT, AIR ? 'src/base-dark.png' : 'src/image_7.png');
+const MAX_W = 2880;
 const FORCE = argv.includes('--force');
-const explicit = argv.find((a) => !a.startsWith('--')) ?? process.env.PRO_SOURCE;
+const explicit = argv.find((a) => !a.startsWith('--')) ?? (AIR ? process.env.AIR_SOURCE : process.env.PRO_SOURCE);
 
 // ------------------------------------------------------------ recherche de la source
 
-const isImage7 = (name) => /image[_ ]?\(?7\)?\.(png|jpe?g|webp)$/i.test(name) || /image_7/i.test(name);
+const isImage7 = AIR
+  ? (name) => /^base-dark\.png$/i.test(name) || /image[_ ]?\(?13\)?\.(png|jpe?g|webp)$/i.test(name)
+  : (name) => /image[_ ]?\(?7\)?\.(png|jpe?g|webp)$/i.test(name) || /image_7/i.test(name);
 
 async function findIn(dir) {
   try {
@@ -40,7 +46,7 @@ async function findIn(dir) {
 async function findSource() {
   if (explicit) return path.resolve(explicit);
   if (existsSync(CACHE)) return CACHE;
-  for (const dir of [root, path.join(root, 'assets'), path.join(os.homedir(), 'Downloads'), path.join(os.homedir(), 'Desktop')]) {
+  for (const dir of [root, path.join(root, 'assets'), path.join(root, 'assets/src'), path.join(os.homedir(), 'Downloads'), path.join(os.homedir(), 'Desktop')]) {
     const f = await findIn(dir);
     if (f) return f;
   }
@@ -48,8 +54,13 @@ async function findSource() {
 }
 
 const src = await findSource();
+const outputs = ['base.webp', 'lum.webp', 'detail.webp', 'edges.webp', 'meta.json'].map((f) => path.join(OUT, f));
 if (!src) {
-  console.error('Image source introuvable. Indiquez son chemin : node scripts/prepare-pro-image.mjs "/chemin/image (7).png"');
+  if (outputs.every((f) => existsSync(f))) {
+    console.log(`${path.relative(root, OUT)} : cartes fournies, image source absente (rien à faire)`);
+    process.exit(0);
+  }
+  console.error(`Image source introuvable. Indiquez son chemin : node scripts/prepare-pro-image.mjs ${AIR ? '--air "/chemin/image (13).png"' : '"/chemin/image (7).png"'}`);
   process.exit(1);
 }
 await mkdir(path.dirname(CACHE), { recursive: true });
@@ -59,12 +70,11 @@ if (path.resolve(src) !== CACHE) {
 }
 
 // Rien à faire si les sorties sont plus récentes que la source.
-const outputs = ['base.webp', 'lum.webp', 'detail.webp', 'edges.webp', 'meta.json'].map((f) => path.join(OUT, f));
 if (!FORCE) {
   const s = await stat(CACHE);
   const ds = await Promise.all(outputs.map((f) => stat(f).catch(() => null)));
   if (ds.every((d) => d && d.mtimeMs > s.mtimeMs)) {
-    console.log('assets/pro à jour (--force pour régénérer)');
+    console.log(`${path.relative(root, OUT)} à jour (--force pour régénérer)`);
     process.exit(0);
   }
 }

@@ -4,3 +4,5 @@ dist-*/
 assets/analysis/
 assets/src/
 .DS_Store
+assets/air/src/
+assets/pro/src/*.tmp

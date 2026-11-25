@@ -1,0 +1,68 @@
+{
+ "size": [
+  1280,
+  832
+ ],
+ "zones": {
+  "battery_top": {
+   "id": 1,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.019,0.981,0.42,0.656],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "logic_board": {
+   "id": 2,
+   "refine": "silhouette",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.34,0.664,0.1,0.381],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "battery_br": {
+   "id": 3,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.71,0.981,0.667,0.947],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "thermal_plate": {
+   "id": 4,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.015,0.336,0.139,0.375],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "battery_bl": {
+   "id": 5,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.02,0.29,0.667,0.947],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "power_stage": {
+   "id": 6,
+   "refine": "silhouette",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.672,0.962,0.145,0.372],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "trackpad_taptic": {
+   "id": 7,
+   "refine": "silhouette",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.387,0.613,0.688,0.918],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "speaker_left": {
+   "id": 8,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.108,0.214,0.03,0.134],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "speaker_right": {
+   "id": 9,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.788,0.894,0.03,0.134],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "ports_right": {
+   "id": 10,
+   "refine": "silhouette",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.966,0.992,0.061,0.323],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "memory_nand": {
+   "id": 11,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.389,0.429,0.171,0.249],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "wifi_bt": {
+   "id": 12,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.601,0.649,0.128,0.18],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  }
+ }
+}

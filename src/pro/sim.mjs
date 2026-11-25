@@ -22,6 +22,7 @@ export function createSimulator(opts = {}) {
     disk: 5e4, diskBurst: 0, net: 8e3, netBurst: 0,
     battery: 0.72, ac: false, acLeft: rand(240, 420),
     audio: false, audioLeft: rand(40, 120), volume: 0.5,
+    idle: 0, typing: rand(5, 30),
     t: 0,
   };
 
@@ -64,6 +65,11 @@ export function createSimulator(opts = {}) {
         if (s.audio && Math.random() < 0.3) s.volume = Math.round(rand(0.25, 0.8) * 16) / 16;
       }
 
+      // Activité clavier / trackpad : sessions de frappe entrecoupées de pauses.
+      s.typing -= dt;
+      if (s.typing <= 0) s.typing = rand(-40, 30);
+      s.idle = s.typing > 0 ? (Math.random() < 0.7 ? rand(0, 0.8) : s.idle + dt) : s.idle + dt;
+
       // Ventilateurs : charge CPU + GPU lissée sur 20 s, avec un seuil (silencieux au repos).
       s.load20 = approach(s.load20, Math.max(avg * 1.6, s.gpu), dt, 20);
       const fan = clamp01(0.08 + (s.load20 - 0.12) * 1.4);
@@ -72,7 +78,7 @@ export function createSimulator(opts = {}) {
       return {
         t: Date.now(),
         source: 'sim',
-        simulated: ['cpu', 'gpu', 'mem', 'disk', 'net', 'power', 'battery', 'thermal', 'audio', 'fan'],
+        simulated: ['cpu', 'gpu', 'mem', 'disk', 'net', 'power', 'battery', 'thermal', 'audio', 'fan', 'input'],
         cpu: { avg, busyCores: s.busy, cores, top: clamp01(s.busy * 0.6 + 0.1), avg30: s.avg30, topProc: Math.min(s.busy, 1) * (s.inBurst ? 1 : 0.3), topProcName: s.inBurst ? 'clang' : 'Finder' },
         gpu: s.gpu,
         mem: { used: s.mem, totalGB },
@@ -83,6 +89,7 @@ export function createSimulator(opts = {}) {
         thermal: { pressure, level: pressure > 0.66 ? 'heavy' : pressure > 0.33 ? 'moderate' : 'nominal' },
         audio: { playing: s.audio, volume: s.volume, muted: false },
         fan: { level: fan, rpm: null, source: 'sim' },
+        input: { idleSec: s.idle },
       };
     },
   };

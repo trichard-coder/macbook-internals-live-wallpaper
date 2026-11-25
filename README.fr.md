@@ -23,38 +23,36 @@ La puce s'embrase quand le processeur travaille, la batterie se remplit avec la 
 
 ---
 
-## Deux Mac, deux moteurs
+## Deux Mac, un seul moteur
+
+Les deux versions tournent sur le même moteur **WebGL2** : une seule image sombre de l'intérieur du Mac, colorisée et animée par des shaders. Son style est « graphite et aurore » : métal graphite neutre, couleurs système d'Apple (corail, rose, violet, indigo, bleu, cyan), lumière douce et diffuse, et deux lueurs colorées très légères qui dérivent depuis les coins. Il tourne à 60 images par seconde, en phase avec l'écran.
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
 ### MacBook Air
-<img src="docs/images/air-themes.webp" alt="Les quatre thèmes de la version Air" width="100%">
+<img src="docs/images/air-themes.webp" alt="Les quatre thèmes de la version MacBook Air" width="100%">
 
-- **Canvas 2D**, sept calques pré-colorés par l'auteur
-- Chaque composant révèle sa couleur à travers un masque adouci
-- Particules sur la nappe, balayage lumineux, diffusion de chaleur
-- Pas de ventilateur, comme le vrai : la chaleur rayonne dans la plaque
-
-[Documentation détaillée →](README-AIR.md)
+- Sans ventilateur, comme le vrai : la chaleur diffuse de la puce vers la plaque
+- 3 cellules de batterie, nappe, grilles de haut-parleurs, Taptic Engine
 
 </td>
 <td width="50%" valign="top">
 
 ### MacBook Pro
-<img src="docs/pro-captures/direct-boucle-cpu.webp" alt="Version MacBook Pro pendant une charge CPU : caloduc incandescent et ventilateurs" width="100%">
+<img src="docs/pro-captures/direct-boucle-cpu.webp" alt="Version MacBook Pro sous charge CPU : caloduc incandescent et ventilateurs" width="100%">
 
-- **WebGL2**, une seule image sombre colorisée par shaders
-- Ventilateurs qui tournent selon la charge, avec un lissage de 20 s
-- Caloduc qui chauffe depuis la puce vers les ailettes
-- Halo, scintillement, flux sur les nappes
-
-[Documentation détaillée →](README-PRO.md)
+- Ventilateurs qui tournent selon la charge, avec un lissage sur 20 s
+- Caloduc qui chauffe des puces vers les ailettes
 
 </td>
 </tr>
 </table>
+
+**La lumière reste à sa place.** Les vrais composants ont des coins arrondis, des encoches et des contours libres : chaque zone est donc limitée à la forme réelle de sa pièce, découpée dans l'image elle-même. La lumière ne déborde jamais sur les pièces voisines. Le caloduc passe devant les boîtiers des puces et masque leur lueur, comme dans la vraie machine. [Documentation du moteur →](README-PRO.md)
+
+La version MacBook Air d'origine, dessinée en Canvas 2D à partir des sept calques pré-colorés par l'auteur, reste disponible en mode « classique » : [documentation →](README-AIR.md)
 
 ## Ce qui s'allume, et pourquoi
 
@@ -90,7 +88,7 @@ npm install
 **Version MacBook Air**
 
 ```sh
-npm run build        # construit la page
+npm run build:air    # construit les pages et les masques de forme
 npm run app          # compile et installe ~/Applications/MBA Wallpaper.app
 open -a "MBA Wallpaper"
 ```
@@ -103,7 +101,7 @@ npm run app:pro      # compile et installe ~/Applications/MBP Wallpaper.app
 open -a "MBP Wallpaper"
 ```
 
-Une icône apparaît dans la barre des menus : thème, écrans, lancement à l'ouverture de session, quitter. L'application lance et surveille elle-même le serveur de télémétrie, inutile de garder un Terminal ouvert. Les deux applications se laissent la place : une seule affiche son fond à la fois.
+Une icône apparaît dans la barre des menus : thème, écrans, économie d'énergie (12 images par seconde), lancement à l'ouverture de session, quitter. L'application lance et surveille elle-même le serveur de télémétrie, inutile de garder un Terminal ouvert. Les deux applications se laissent la place : une seule affiche son fond à la fois.
 
 <details>
 <summary><b>Pourquoi une application maison plutôt que Plash ?</b></summary>
@@ -112,7 +110,7 @@ Une icône apparaît dans la barre des menus : thème, écrans, lancement à l'o
 
 [Plash](https://sindresorhus.com/plash) est l'outil classique pour afficher une page web en fond d'écran, mais il n'est distribué que sur l'App Store, ce qui exclut les Mac sans identifiant Apple (souvent les Mac professionnels). Le projet embarque donc un remplaçant minimal (`mac/main.swift`, environ 250 lignes) : une fenêtre par écran placée au niveau du bureau, sous les icônes, transparente aux clics, qui affiche la page dans un WKWebView. Elle se compile sur place avec `swiftc`.
 
-Si vous avez Plash, il fonctionne aussi : lancez `npm run telemetry` (Air, port 8787) ou `npm run telemetry:pro` (Pro, port 8788), puis ajoutez `http://localhost:8787/` ou `http://localhost:8788/pro.html` dans Plash.
+Si vous avez Plash, il fonctionne aussi : lancez `npm run telemetry:pro` (port 8788), puis ajoutez `http://localhost:8788/air.html` ou `http://localhost:8788/pro.html` dans Plash.
 
 </details>
 
@@ -134,18 +132,18 @@ D'autres paramètres permettent de régler la cadence (`?fps=`), la résolution 
 
 ```
  commandes macOS                serveur Node.js               page web                  application native
- (ioreg, pmset, vm_stat,  ──▶   127.0.0.1, sans      ──SSE──▶  Canvas 2D (Air)    ──▶   fenêtre au niveau
-  netstat, iostat, ps...)       dépendance, 1 Hz              ou WebGL2 (Pro)           du bureau (WKWebView)
+ (ioreg, pmset, vm_stat,  ──▶   127.0.0.1, sans      ──SSE──▶  moteur WebGL2      ──▶   fenêtre au niveau
+  netstat, iostat, ps...)       dépendance, 1 Hz              air.html / pro.html       du bureau (WKWebView)
 ```
 
 - **Respect de la vie privée** : le serveur n'écoute que sur `127.0.0.1` et n'accepte que les pages locales. Aucune donnée ne quitte votre Mac.
 - **Robuste** : une mesure qui échoue est remplacée par une simulation réaliste, champ par champ. Sans serveur, la page simule tout.
-- **Sobre** : seules les zones qui changent sont redessinées, la cadence s'adapte (de 6 à 60 images par seconde), et tout s'arrête quand la page est masquée.
+- **Fluide** : 60 images par seconde en phase avec l'écran, et chaque changement accélère puis ralentit (amortissement critique), sans à-coup. Tout s'arrête quand la page est masquée.
 
 ## État actuel, en toute transparence
 
 - ✅ Mesures réelles, réaction à la charge, thèmes, éditeur de zones, applications natives.
-- ⚠️ **Consommation au repos** : la version Air consomme environ 14 % d'un cœur dans l'application réelle, au-dessus de l'objectif de 5 %. La version Pro propose un mode « Économie d'énergie » à 12 images par seconde. C'est le prochain chantier ; en attendant, `?fps=12` ou `?quality=0.75` réduisent nettement la charge.
+- ⚠️ **Consommation** : la fluidité a un coût. Mesurée dans l'application réelle à 60 images par seconde, chaque version consomme environ 21 à 22 % d'un cœur (contenu web, processus GPU et application réunis). L'option « Économie d'énergie » du menu (12 images par seconde) ou `?quality=0.75` la réduisent nettement.
 - Testé sur un MacBook Pro 14 pouces M4 Pro sous macOS 26.
 
 ## Structure
@@ -153,12 +151,11 @@ D'autres paramètres permettent de régler la cadence (`?fps=`), la résolution 
 ```
 mac/, mac-pro/            applications de fond d'écran (Swift, AppKit + WKWebView)
 server/                   serveurs de télémétrie (Node.js, sans dépendance)
-src/                      version Air (Canvas 2D)
-src/pro/                  version Pro (WebGL2)
-assets/opt/               calques Air (WebP)
-assets/pro/               image Pro et cartes dérivées
-profiles/pro.json         zones et réglages de la version Pro
-scripts/                  préparation des images, compilation des applications
+src/pro/                  moteur WebGL2 commun aux deux Mac (air.html, pro.html)
+profiles/                 zones et réglages (air.json, pro.json)
+assets/air/, assets/pro/  images, cartes dérivées et masques de forme
+scripts/                  préparation des images, masques de forme, compilation des applications
+src/, assets/opt/         version Air classique (Canvas 2D, index.html)
 docs/                     captures
 ```
 

@@ -1,0 +1,78 @@
+{
+ "size": [
+  1440,
+  935
+ ],
+ "zones": {
+  "heatpipe": {
+   "id": 1,
+   "refine": "fill",
+   "geom": "{\"kind\":\"path\",\"rect\":[0.282,0.716,0.0364,0.3446],\"inner\":null,\"circle\":null,\"path\":[[0.309,0.078],[0.357,0.142],[0.403,0.259],[0.445,0.291],[0.499,0.303],[0.553,0.291],[0.595,0.259],[0.641,0.142],[0.689,0.078]],\"width\":0.027,\"polygon\":null}"
+  },
+  "bat_c1": {
+   "id": 2,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.321,0.475,0.605,0.899],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "bat_c2": {
+   "id": 3,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.527,0.679,0.605,0.899],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "bat_r1": {
+   "id": 4,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.727,0.929,0.605,0.805],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "bat_l1": {
+   "id": 5,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.071,0.273,0.605,0.805],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "bat_r2": {
+   "id": 6,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.727,0.912,0.812,0.999],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "bat_l2": {
+   "id": 7,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.088,0.273,0.812,0.999],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "heat_plate_right": {
+   "id": 8,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.584,0.685,0.184,0.505],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "heat_plate_left": {
+   "id": 9,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.315,0.416,0.184,0.505],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "trackpad": {
+   "id": 10,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.42,0.58,0.957,1],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "speaker_left": {
+   "id": 11,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.034,0.08,0.831,0.97],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "speaker_right": {
+   "id": 12,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.92,0.966,0.831,0.97],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "sensor_right": {
+   "id": 13,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.601,0.689,0.951,0.967],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  },
+  "sensor_left": {
+   "id": 14,
+   "refine": "fill",
+   "geom": "{\"kind\":\"rect\",\"rect\":[0.324,0.408,0.951,0.967],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+  }
+ }
+}

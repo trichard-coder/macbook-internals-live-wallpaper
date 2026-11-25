@@ -1,6 +1,6 @@
 import './style.css';
-import lumUrl from '../../assets/pro/lum.webp';
 import { config } from './config';
+import { device } from './device';
 import { loadProfile } from './profile';
 import { Renderer } from './renderer';
 import { SignalModel, type Derived } from './signals';
@@ -17,7 +17,7 @@ function fallback(e: unknown) {
   console.warn('Rendu WebGL2 impossible, image fixe :', (e as Error).message);
   canvas.remove();
   document.body.classList.add('no-webgl');
-  document.body.style.backgroundImage = `url("${lumUrl}")`;
+  document.body.style.backgroundImage = `url("${device().maps.lum}")`;
 }
 
 let renderer: Renderer;
@@ -39,13 +39,13 @@ renderer.motion = motionOk();
 
 let prevAc: boolean | null = null;
 function apply(d: Derived) {
-  // Branchement de l'adaptateur : impulsion sur les ports, onde partant du MagSafe.
+  // Branchement de l'adaptateur : impulsion sur les ports, onde partant du connecteur secteur.
   if (prevAc === false && d.battery.ac) {
-    for (const id of ['magsafe', 'ports_left', 'ports_right']) {
+    for (const id of device().acZones) {
       const z = renderer.zone(id);
       if (z) renderer.pulse(z, undefined, undefined, 1);
     }
-    const m = renderer.zone('magsafe');
+    const m = device().acRipple ? renderer.zone(device().acRipple!) : undefined;
     if (m) renderer.ripple(m.def.rect[0], (m.def.rect[2] + m.def.rect[3]) / 2, 1);
   }
   prevAc = d.battery.ac;

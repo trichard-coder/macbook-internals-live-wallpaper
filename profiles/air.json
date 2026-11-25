@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "MacBook Air",
+  "image": { "source": "base-dark.png", "width": 2560, "height": 1664 },
+  "narrative": { "die_top": "cpu", "die_bottom": "gpu" },
+  "render": { "gamma": 0.9, "exposure": 0.6, "ambient": 0.3, "ambientGlow": 0, "bloom": 1, "detail": 0.4, "edges": 0.3, "grain": 0.006, "vignette": 0.34, "aurora": 0.07 },
+  "zones": [
+    { "id": "logic_board", "label": "Carte logique", "kind": "rect", "effect": "glow", "signal": "activity", "rect": [0.34, 0.664, 0.1, 0.381], "feather": 0.01, "gain": 0.3, "refine": "silhouette" },
+    { "id": "thermal_plate", "label": "Plaque thermique", "kind": "rect", "effect": "plate", "signal": "heat", "rect": [0.015, 0.336, 0.139, 0.375], "feather": 0.012, "refine": "fill" },
+    { "id": "heat_spread", "label": "Diffusion de chaleur", "kind": "path", "effect": "heatpipe", "signal": "heat", "rect": [-0.02, 0.385, 0.1751, 0.3389], "feather": 0.01, "path": [[0.335, 0.262], [0.22, 0.258], [0.11, 0.255], [0.03, 0.252]], "width": 0.05, "origin": 0, "maskOf": "thermal_plate" },
+    { "id": "power_stage", "label": "Étage d'alimentation", "kind": "rect", "effect": "power", "signal": "power", "rect": [0.672, 0.962, 0.145, 0.372], "feather": 0.008, "refine": "silhouette" },
+    { "id": "soc_memory", "label": "Mémoire unifiée", "kind": "rect", "effect": "frame", "signal": "mem", "rect": [0.484, 0.575, 0.208, 0.243], "feather": 0.003 },
+    { "id": "soc", "label": "Puce (CPU et GPU)", "kind": "rect", "effect": "chip", "signal": "soc", "rect": [0.484, 0.575, 0.243, 0.328], "feather": 0.003 },
+    { "id": "memory_nand", "label": "Stockage", "kind": "rect", "effect": "nand", "signal": "io", "rect": [0.389, 0.429, 0.171, 0.249], "feather": 0.004, "refine": "fill" },
+    { "id": "wifi_bt", "label": "Wi-Fi et Bluetooth", "kind": "rect", "effect": "network", "signal": "net", "rect": [0.601, 0.649, 0.128, 0.18], "feather": 0.004, "refine": "fill" },
+    { "id": "speaker_left", "label": "Haut-parleur gauche", "kind": "rect", "effect": "speaker", "signal": "audio", "rect": [0.108, 0.214, 0.03, 0.134], "feather": 0.008, "refine": "fill" },
+    { "id": "speaker_right", "label": "Haut-parleur droit", "kind": "rect", "effect": "speaker", "signal": "audio", "rect": [0.788, 0.894, 0.03, 0.134], "feather": 0.008, "refine": "fill" },
+    { "id": "battery_bl", "label": "Batterie, cellule bas gauche", "kind": "rect", "effect": "battery", "signal": "battery", "cell": 0, "rect": [0.02, 0.29, 0.667, 0.947], "feather": 0.006, "refine": "fill" },
+    { "id": "battery_br", "label": "Batterie, cellule bas droite", "kind": "rect", "effect": "battery", "signal": "battery", "cell": 1, "rect": [0.71, 0.981, 0.667, 0.947], "feather": 0.006, "refine": "fill" },
+    { "id": "battery_top", "label": "Batterie, cellule haute", "kind": "rect", "effect": "battery", "signal": "battery", "cell": 2, "rect": [0.019, 0.981, 0.42, 0.656], "feather": 0.006, "refine": "fill" },
+    { "id": "trackpad_taptic", "label": "Trackpad et Taptic Engine", "kind": "rect", "effect": "trackpad", "signal": "input", "rect": [0.387, 0.613, 0.688, 0.918], "feather": 0.008, "refine": "silhouette" },
+    { "id": "flex_cable", "label": "Nappe centrale", "kind": "path", "effect": "flex", "signal": "activity", "rect": [0.484, 0.516, 0.381, 0.9796], "feather": 0.004, "path": [[0.5, 0.4056], [0.5, 0.955]], "width": 0.016 },
+    { "id": "display_connector", "label": "Connecteur d'écran", "kind": "rect", "effect": "control", "signal": "day", "rect": [0.431, 0.569, 0.032, 0.103], "feather": 0.006 },
+    { "id": "ports_right", "label": "Ports USB-C et MagSafe", "kind": "rect", "effect": "port", "signal": "ac", "rect": [0.966, 0.992, 0.061, 0.323], "feather": 0.005, "refine": "silhouette" }
+  ]
+}

@@ -29,48 +29,50 @@ export interface Theme {
   mono: boolean;
 }
 
-const VENT: Stops = ['#5a1a08', '#ff9a3c', '#ff5a1a', '#e01420'];
-const ALERT: Stops = ['#ff2a2a', '#ff4a1a'];
-const DAY: Stops = ['#ff9a3c', '#ffc27a', '#ff4f7a'];
+// Palettes inspirées des couleurs système d'Apple (orange, rose, violet, indigo, bleu, cyan) :
+// pas de jaune ni de vert phosphore, qui donnaient un aspect « terminal ». Fond graphite neutre.
+const VENT: Stops = ['#1a0806', '#ff6b3d', '#ff375f', '#ff2d55'];
+const ALERT: Stops = ['#ff375f', '#ff6b3d'];
+const DAY: Stops = ['#ff9f0a', '#ffc58a', '#ff6482'];
 
 export const THEME_DEFS: Record<ThemeName, Theme> = {
   rainbow: {
     name: 'rainbow',
-    board: ['#ff7a1a', '#ffc21a', '#7ed957', '#19d3c5'],
-    die: ['#ff7a1a', '#ff4fa3', '#b05cff', '#3b8bff', '#19d3c5'],
-    dieAlt: ['#ffc21a', '#7ed957', '#19d3c5'],
-    heat: ['#3b8bff', '#19d3c5', '#ffc21a', '#ff7a1a', '#ff3b1a'],
-    ambient: ['#050609', '#151a24', '#4a5466', '#c4ccd8'],
+    board: ['#ff7a5c', '#ff375f', '#bf5af2', '#5e5ce6', '#0a84ff', '#40c8e0'],
+    die: ['#40c8e0', '#0a84ff', '#5e5ce6', '#bf5af2', '#ff375f', '#ff9f0a'],
+    dieAlt: ['#64d2ff', '#7d7aff', '#da8fff'],
+    heat: ['#0a84ff', '#5e5ce6', '#bf5af2', '#ff375f', '#ff8a3d', '#ffd9b0'],
+    ambient: ['#030406', '#0b0e13', '#363c47', '#d4d9e1'],
     vent: VENT, alert: ALERT, day: DAY, mono: false,
   },
   warm: {
     name: 'warm',
-    board: ['#ff9a3c', '#ff4f7a', '#8a4fe0'],
-    die: ['#ff9a3c', '#ff4f7a', '#8a4fe0'],
-    dieAlt: ['#ffc27a', '#ff9a3c', '#ff4f7a'],
-    heat: ['#8a4fe0', '#ff4f7a', '#ff9a3c', '#ffd08a'],
-    ambient: ['#070508', '#1d1418', '#5a4a4c', '#d8c8c4'],
+    board: ['#ff9f0a', '#ff6b4a', '#ff375f', '#bf5af2'],
+    die: ['#ffb340', '#ff6482', '#da8fff'],
+    dieAlt: ['#ffd08a', '#ff9f0a', '#ff6482'],
+    heat: ['#bf5af2', '#ff375f', '#ff8a3d', '#ffe2c0'],
+    ambient: ['#050404', '#100d0e', '#3f393b', '#ded6d3'],
     vent: VENT, alert: ALERT, day: DAY, mono: false,
   },
   sunset: {
     name: 'sunset',
-    board: ['#f2c230', '#e0508a', '#9a4fd8'],
-    die: ['#f2c230', '#e0508a', '#9a4fd8'],
-    dieAlt: ['#ffe07a', '#f2c230', '#e0508a'],
-    heat: ['#9a4fd8', '#e0508a', '#f2c230', '#fff0b0'],
-    ambient: ['#06050a', '#18131f', '#504658', '#d4c8d8'],
+    board: ['#ffb340', '#ff6482', '#bf5af2', '#7d7aff'],
+    die: ['#ffb340', '#ff6482', '#bf5af2', '#7d7aff'],
+    dieAlt: ['#ffd60a', '#ffb340', '#ff6482'],
+    heat: ['#7d7aff', '#bf5af2', '#ff6482', '#ffb340', '#fff0d0'],
+    ambient: ['#040408', '#0d0c13', '#3b3946', '#d8d4e2'],
     vent: VENT, alert: ALERT, day: DAY, mono: false,
   },
   mono: {
     name: 'mono',
-    board: ['#8fa3b8', '#8fa3b8'],
-    die: ['#7d92a8', '#b6c6d6', '#7d92a8'],
-    dieAlt: ['#a8bacb', '#8fa3b8'],
-    heat: ['#56677c', '#8fa3b8', '#dde7f1'],
-    ambient: ['#050608', '#141820', '#4a5462', '#c8d0da'],
-    vent: ['#3a4452', '#8fa3b8', '#c8d6e4', '#ffffff'],
-    alert: ['#c8d6e4', '#ffffff'],
-    day: ['#b6c6d6', '#dde7f1'],
+    board: ['#9aa6b6', '#d9dfe7'],
+    die: ['#8e9bad', '#e6ebf1', '#8e9bad'],
+    dieAlt: ['#b8c3d0', '#9aa6b6'],
+    heat: ['#5d6a7b', '#a9b5c4', '#f2f5f8'],
+    ambient: ['#030405', '#0d1014', '#3c424b', '#d4d9df'],
+    vent: ['#2e3540', '#9aa6b6', '#d9dfe7', '#ffffff'],
+    alert: ['#d9dfe7', '#ffffff'],
+    day: ['#c3ccd7', '#eef1f5'],
     mono: true,
   },
 };

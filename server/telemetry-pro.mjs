@@ -5,8 +5,8 @@
 // CPU / GPU.
 //   GET  /telemetry          flux SSE (1 ou 2 Hz)
 //   GET  /telemetry.json     dernier instantané
-//   POST /__profile-pro      réécrit profiles/pro.json (éditeur de zones)
-//   GET  /*                  sert le build statique (dist-pro/, page pro.html) pour Plash
+//   POST /__profile-pro|air  réécrit profiles/pro.json ou profiles/air.json (éditeur de zones)
+//   GET  /*                  sert le build statique (dist-pro/ : pro.html et air.html)
 //
 // Options : --port 8788  --hz 1|2  --sim  --static <dossier>  --verbose
 //           --powermetrics  lit la vraie vitesse des ventilateurs et les puissances CPU / GPU
@@ -36,7 +36,7 @@ const HZ = Math.min(2, Math.max(0.5, Number(arg('--hz') ?? env.TELEMETRY_HZ ?? 1
 const FORCE_SIM = argv.includes('--sim') || env.TELEMETRY_SIM === '1';
 const POWERMETRICS = argv.includes('--powermetrics');
 const STATIC_DIR = path.resolve(root, arg('--static') ?? 'dist-pro');
-const PROFILE_FILE = path.join(root, 'profiles/pro.json');
+const PROFILE_FILES = { pro: path.join(root, 'profiles/pro.json'), air: path.join(root, 'profiles/air.json') };
 const VERBOSE = argv.includes('--verbose');
 const IS_MAC = process.platform === 'darwin';
 const FAN_MIN = Number(env.FAN_MIN_RPM ?? 1200), FAN_MAX = Number(env.FAN_MAX_RPM ?? 6500);
@@ -298,8 +298,9 @@ const COLLECTORS = {
   power: { every: 5, fn: samplePower },
   battery: { every: 10, fn: sampleBattery },
   thermal: { every: 15, fn: sampleThermal },
+  input: { every: 1, fn: sampleInput },
 };
-const MAC_ONLY = new Set(['procs', 'gpu', 'net', 'disk', 'audio', 'mem', 'power', 'battery', 'thermal']);
+const MAC_ONLY = new Set(['input', 'procs', 'gpu', 'net', 'disk', 'audio', 'mem', 'power', 'battery', 'thermal']);
 
 const live = {}, fails = {}, lastRun = {}, busy = {};
 const sim = createSimulator({ cores: os.cpus().length || 14, totalGB: Math.round(os.totalmem() / 2 ** 30) });
@@ -345,10 +346,10 @@ function compose() {
 
   return {
     t: Date.now(),
-    source: simulated.length === 0 ? 'live' : simulated.length >= 9 ? 'sim' : 'partial',
+    source: simulated.length === 0 ? 'live' : simulated.length >= 10 ? 'sim' : 'partial',
     simulated,
     cpu, gpu, mem: pick('mem'), disk: pick('disk'), net: pick('net'), power, battery,
-    thermal, audio: pick('audio'), fan,
+    thermal, audio: pick('audio'), fan, input: pick('input'),
   };
 }
 
@@ -428,7 +429,7 @@ async function serveStatic(req, res, pathname) {
     });
     res.end(body);
   } catch {
-    if (rel === '/pro.html') {
+    if (rel === '/pro.html' || rel === '/air.html') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end('<!doctype html><meta charset="utf-8"><body style="background:#111;color:#ccc;font:14px system-ui;padding:2em">'
         + 'Build introuvable. Lancez <code>npm run build:pro</code>, puis rechargez. Le flux est disponible sur <a href="/telemetry" style="color:#8cf">/telemetry</a>.</body>');
@@ -470,11 +471,12 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(latest ?? compose(), null, 2));
     return;
   }
-  if (pathname === '/__profile-pro' && req.method === 'POST') {
+  const profileMatch = pathname.match(/^\/__profile-(pro|air)$/);
+  if (profileMatch && req.method === 'POST') {
     if (origin === null) { res.writeHead(403).end(); return; }
     try {
-      await writeProfileFile(PROFILE_FILE, JSON.parse(await readBody(req)));
-      log('profiles/pro.json mis à jour (relancez npm run build:pro pour le build statique)');
+      await writeProfileFile(PROFILE_FILES[profileMatch[1]], JSON.parse(await readBody(req)));
+      log(`profiles/${profileMatch[1]}.json mis à jour (relancez npm run build:${profileMatch[1]} pour le build statique)`);
       res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': origin }).end('{"ok":true}');
     } catch (e) {
       res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': origin }).end(JSON.stringify({ ok: false, error: e.message }));

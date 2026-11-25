@@ -4,7 +4,7 @@
 //   2. bright   (1/4) : émissif x (détails + contours) lus dans les mipmaps, source du bloom
 //   3. blur H puis blur V (1/4) : flou gaussien du bloom
 //   4. composite (pleine résolution) : niveaux, gradient map, rotation des ventilateurs,
-//      émissif appliqué sur les pistes et arêtes, bloom, grain, vignette
+//      émissif appliqué aux surfaces (et un peu aux arêtes), bloom, aurore, grain, vignette
 // Les coordonnées des zones sont exprimées en « unités de largeur » : P = (u, v * aspect).
 
 export const MAXZ = 40;
@@ -72,7 +72,7 @@ uniform vec4 uZRect[MAXZ];   // boîte (x0, x1, y0, y1) en unités de largeur
 uniform vec4 uZParam[MAXZ];  // effet, forme, fondu, origine / cellule
 uniform vec4 uZState[MAXZ];  // niveau, survol, impulsion, auxiliaire
 uniform vec4 uZGeom[MAXZ];   // cercle / cadre intérieur / chemin / polygone
-uniform vec4 uZAnim[MAXZ];   // phase, drapeau A, drapeau B, libre
+uniform vec4 uZAnim[MAXZ];   // phase, drapeau A, drapeau B, premier plan (1 : masque les zones dessous)
 uniform int uZCount;
 uniform vec4 uSeg[MAXSEG];   // a.xy, b.xy
 uniform vec4 uSegInfo[MAXSEG]; // abscisse curviligne au début, longueur
@@ -80,9 +80,21 @@ uniform vec4 uPoly[MAXPOLY4];
 uniform vec4 uRipple[MAXRIPPLE]; // x, y (unités de largeur), âge, force
 uniform int uRippleCount;
 uniform float uTime, uAspect, uAmbientGlow, uMotion, uOut;
+uniform sampler2D uZoneMask;  // identifiants de zones par pixel (R, G, B : jusqu'à 3 superpositions)
+uniform float uZMask[MAXZ];   // identifiant du masque de chaque zone (0 : forme géométrique seule)
+uniform float uHasMask;
+uniform vec2 uMaskTexel;
 in vec2 vImg;
 out vec4 o;
 ${COMMON}
+
+// Quatre échantillons du masque autour du pixel : couverture à 5 niveaux, bords adoucis.
+vec3 gT[4];
+float maskCov(float k) {
+  float c = 0.0;
+  for (int t = 0; t < 4; t++) c += any(equal(gT[t], vec3(k))) ? 0.25 : 0.0;
+  return c;
+}
 
 float sdBox(vec2 p, vec4 r) {
   vec2 c = vec2(r.x + r.y, r.z + r.w) * 0.5, h = vec2(r.y - r.x, r.w - r.z) * 0.5;
@@ -129,6 +141,34 @@ void main() {
   vec3 acc = board * uAmbientGlow * (0.85 + 0.15 * sin(uTime * 0.25 + u * 4.0) * uMotion);
   float surfW = 0.0, wSum = 1e-4;
 
+  if (uHasMask > 0.5) {
+    vec2 h = uMaskTexel * 0.5;
+    gT[0] = floor(texture(uZoneMask, vImg + vec2(-h.x, -h.y)).rgb * 255.0 + 0.5);
+    gT[1] = floor(texture(uZoneMask, vImg + vec2(h.x, -h.y)).rgb * 255.0 + 0.5);
+    gT[2] = floor(texture(uZoneMask, vImg + vec2(-h.x, h.y)).rgb * 255.0 + 0.5);
+    gT[3] = floor(texture(uZoneMask, vImg + vec2(h.x, h.y)).rgb * 255.0 + 0.5);
+  }
+
+  // Zones au premier plan (caloduc) : leur forme masque la lumière des zones situées dessous,
+  // sinon la lueur d'un boîtier traverserait le tube comme s'il était transparent.
+  float occ = 0.0;
+  for (int i = 0; i < MAXZ; i++) {
+    if (i >= uZCount) break;
+    if (uZAnim[i].w < 0.5) continue;
+    vec4 R = uZRect[i], prm = uZParam[i], G = uZGeom[i];
+    float f = max(prm.z, 1e-4);
+    if (P.x < R.x - 3.0 * f || P.x > R.y + 3.0 * f || P.y < R.z - 3.0 * f || P.y > R.w + 3.0 * f) continue;
+    int kind = int(prm.y + 0.5);
+    float mm = 0.0;
+    if (kind == 2) {
+      vec2 ds = pathDist(P, int(G.x + 0.5), int(G.y + 0.5));
+      mm = 1.0 - smoothstep(1.0 - f / G.z, 1.0 + f / G.z, ds.x / max(G.z, 1e-4));
+    } else if (kind == 0) mm = 1.0 - smoothstep(-f, f, sdBox(P, R));
+    // Forme réelle du tube quand elle est connue (masque) : l'occultation suit exactement le caloduc.
+    if (uHasMask > 0.5 && uZMask[i] > 0.5) mm *= maskCov(uZMask[i]);
+    occ = max(occ, mm);
+  }
+
   for (int i = 0; i < MAXZ; i++) {
     if (i >= uZCount) break;
     vec4 R = uZRect[i];
@@ -140,21 +180,24 @@ void main() {
     float L = st.x, hover = st.y, imp = st.z, aux = st.w, phase = an.x;
     vec2 lp = (P - R.xz) / max(R.yw - R.xz, vec2(1e-4)); // coordonnées locales 0..1
 
-    // Masque de forme
+    // Masque de forme. Le fondu est entièrement intérieur : la lumière s'estompe avant le bord et
+    // ne sort jamais de la zone (un fondu centré débordait de moitié sur les pièces voisines).
     float m = 1.0, across = 0.0, sAlong = 0.0;
-    if (kind == 0) m = 1.0 - smoothstep(-f, f, sdBox(P, R));
-    else if (kind == 3) m = 1.0 - smoothstep(-f, f, max(sdBox(P, R), -sdBox(P, G)));
-    else if (kind == 4) m = 1.0 - smoothstep(-f, f, sdPoly(P, int(G.x + 0.5), int(G.y + 0.5)));
+    if (kind == 0) m = 1.0 - smoothstep(-2.0 * f, 0.0, sdBox(P, R));
+    else if (kind == 3) m = 1.0 - smoothstep(-2.0 * f, 0.0, max(sdBox(P, R), -sdBox(P, G)));
+    else if (kind == 4) m = 1.0 - smoothstep(-2.0 * f, 0.0, sdPoly(P, int(G.x + 0.5), int(G.y + 0.5)));
     else if (kind == 1) {
       float r = length(P - G.xy);
-      m = 1.0 - smoothstep(G.w - f, G.w + f, r);
+      m = 1.0 - smoothstep(G.w - 2.0 * f, G.w, r);
       across = r;
     } else if (kind == 2) {
       vec2 ds = pathDist(P, int(G.x + 0.5), int(G.y + 0.5));
       across = ds.x / max(G.z, 1e-4);
       sAlong = ds.y;
-      m = 1.0 - smoothstep(1.0 - f / G.z, 1.0 + f / G.z, across);
+      m = 1.0 - smoothstep(1.0 - 2.0 * f / G.z, 1.0, across);
     }
+    // Forme réelle du composant (masque calculé depuis l'image) : la lumière ne déborde pas.
+    if (uHasMask > 0.5 && uZMask[i] > 0.5) m *= maskCov(uZMask[i]);
     if (m <= 0.001) continue;
 
     vec3 col = board;
@@ -163,21 +206,21 @@ void main() {
     if (effect == 1) { // puce : spectre complet, glisse vers le chaud avec la charge
       float t = (lp.x + lp.y) * 0.5, s = lp.x - lp.y;
       vec3 spec = mix(ramp(uRamp, 1.0, t), ramp(uRamp, 2.0, 0.5 + 0.5 * s), smoothstep(0.15, 0.95, s) * 0.75);
-      col = mix(spec, ramp(uRamp, 3.0, 0.2 + 0.8 * L), 0.12 + 0.45 * L);
+      col = mix(spec, ramp(uRamp, 3.0, 0.2 + 0.8 * L), 0.08 + 0.28 * L);
       I = 0.14 + 0.95 * L * (1.0 + 0.06 * sin(phase));
       surf = 0.75;
     } else if (effect == 2) { // cadre : pression mémoire
       col = mix(board, ramp(uRamp, 1.0, lp.x * 0.5 + lp.y * 0.5), 0.5);
-      float run = 0.5 + 0.5 * sin((lp.x - lp.y) * 6.0 - phase);
-      I = 0.06 + L * (0.55 + 0.45 * run);
-      surf = 0.12;
+      float run = 0.5 + 0.5 * sin((lp.x - lp.y) * 2.5 - phase * 0.6);
+      I = 0.06 + L * (0.6 + 0.4 * run);
+      surf = 0.18;
     } else if (effect == 3) { // ventilateur : anneau des ailettes
       float rb = G.z, ring = smoothstep(rb * 0.5, rb * 0.8, across) * (1.0 - smoothstep(rb * 0.98, rb * 1.06, across));
       float housing = smoothstep(rb * 1.1, rb * 1.4, across) * (1.0 - smoothstep(G.w * 0.85, G.w, across));
       I = ring * (0.1 + 0.6 * L) + housing * 0.2 * L;
-      surf = 0.05;
+      surf = 0.22;
     } else if (effect == 4) { // grille d'évacuation : air chaud, orange puis rouge
-      float n = vnoise(vec2(lp.x * 26.0, lp.y * 2.5 + phase));
+      float n = vnoise(vec2(lp.x * 7.0, lp.y * 1.6 + phase * 0.5));
       col = ramp(uRamp, 5.0, 0.2 + 0.8 * L);
       I = L * (0.45 + 0.9 * n) * (0.6 + 0.4 * lp.y) * 1.6;
       surf = 0.35;
@@ -185,53 +228,53 @@ void main() {
       float total = G.w, o0 = prm.w * total;
       float d = abs(sAlong - o0), dn = d / max(total * max(prm.w, 1.0 - prm.w), 1e-4);
       float g = mix(1.0, 0.5, dn);
-      float pulse = pow(0.5 + 0.5 * cos(6.2832 * (d * 9.0 - phase)), 3.0);
+      float pulse = pow(0.5 + 0.5 * cos(6.2832 * (d * 3.5 - phase * 0.6)), 2.0);
       float prof = exp(-across * across * 2.2);
       col = ramp(uRamp, 3.0, clamp(L * g * 1.05, 0.0, 1.0));
       I = prof * (0.03 + L * g * (0.45 + 0.85 * pulse * uMotion + 0.4 * (1.0 - uMotion)));
       surf = 0.6;
     } else if (effect == 6) { // plaque : chaleur montante
       float g = mix(1.0, 0.45, lp.y);
-      float stripes = 0.5 + 0.5 * sin(lp.y * 22.0 + phase);
+      float shimmer = vnoise(vec2(lp.x * 2.5, lp.y * 3.0 - phase * 0.35));
       col = ramp(uRamp, 3.0, clamp(L * (0.55 + 0.45 * g), 0.0, 1.0));
-      I = L * g * (0.45 + 0.55 * stripes) * 0.7;
+      I = L * g * (0.55 + 0.45 * shimmer) * 0.7;
       surf = 0.3;
     } else if (effect == 7) { // alimentation : balayage
       float x = prm.w > 0.5 ? 1.0 - lp.x : lp.x;
-      float band = exp(-pow((x - fract(phase)) * 7.0, 2.0));
-      I = 0.04 + L * (0.3 + 1.3 * band * uMotion);
-      surf = 0.08;
+      float band = exp(-pow((x - fract(phase)) * 3.5, 2.0));
+      I = 0.04 + L * (0.3 + 1.1 * band * uMotion);
+      surf = 0.25;
     } else if (effect == 8) { // stockage : scintillement proportionnel aux E/S
-      vec2 cell = floor(lp * vec2(14.0, 7.0));
-      float h = hash12(cell + floor(phase) * 7.13);
-      I = 0.05 + L * 0.3 + step(1.0 - L * 0.85, h) * (0.5 + L);
-      surf = 0.2;
+      float sh = vnoise(lp * vec2(3.0, 2.0) + vec2(phase * 0.12, phase * 0.05));
+      I = 0.05 + L * 0.35 + L * 0.65 * smoothstep(0.35, 0.85, sh);
+      surf = 0.45;
     } else if (effect == 9) { // batterie : remplissage, flux de charge, alerte
       float fill = aux;
       float y = 1.0 - lp.y;
       float filled = 1.0 - smoothstep(fill - 0.015, fill + 0.015, y);
-      float line = exp(-pow((y - fill) * 40.0, 2.0)) * step(0.01, fill) * step(fill, 0.995);
-      float flow = an.y * filled * pow(0.5 + 0.5 * sin(y * 18.0 - phase), 4.0);
+      float line = exp(-pow((y - fill) * 22.0, 2.0)) * step(0.01, fill) * step(fill, 0.985);
+      float flow = an.y * filled * pow(0.5 + 0.5 * sin(y * 5.0 - phase * 0.7), 3.0);
       col = an.z > 0.5 ? ramp(uRamp, 6.0, lp.x) : board;
-      I = 0.03 + filled * (0.14 + 0.1 * an.z * (0.5 + 0.5 * sin(uTime * 3.0))) + line * 0.35 + flow * 0.6;
-      surf = 0.14;
+      I = 0.03 + filled * (0.14 + 0.1 * an.z * (0.5 + 0.5 * sin(uTime * 2.0))) + line * 0.12 + flow * 0.5;
+      surf = 0.3;
     } else if (effect == 10) { // nappe : particules le long du chemin
       float total = G.w, sn = sAlong / max(total, 1e-4);
-      float lane = floor((across * 0.5 + 0.5) * 3.0);
-      float k = fract(sn * 7.0 - phase + hash12(vec2(lane, 3.0)) * 0.7);
-      float part = smoothstep(0.82, 1.0, k) * (1.0 - smoothstep(0.6, 1.0, across));
+      // Comètes : tête lumineuse et traînée douce, sans couloirs ni barres.
+      // Nombre de comètes proportionnel à la longueur (environ 3 sur la nappe Pro, 5 sur l'Air).
+      float k = fract(sn * max(2.0, total * 14.0) - phase);
+      float part = smoothstep(0.4, 0.94, k) * smoothstep(0.4, 0.94, k) * (1.0 - smoothstep(0.94, 0.995, k)) * exp(-across * across * 1.5);
       col = ramp(uRamp, 0.0, 0.85 - sn * 0.7);
       I = 0.04 + L * 0.22 + part * (0.25 + 1.1 * L) * uMotion;
       surf = 0.45;
     } else if (effect == 11) { // haut-parleur : pulsation concentrique
       vec2 q = (lp - 0.5) * 2.0;
       float r = length(q);
-      float rings = 0.5 + 0.5 * sin(r * 16.0 - phase);
-      I = L * (0.18 + 0.8 * rings * (1.0 - smoothstep(0.3, 1.1, r)));
-      surf = 0.25;
+      float rings = 0.5 + 0.5 * sin(r * 7.0 - phase * 0.6);
+      I = L * (0.2 + 0.75 * rings * (1.0 - smoothstep(0.3, 1.1, r)));
+      surf = 0.35;
     } else if (effect == 12) { // trackpad et capteurs : activité du pointeur
       I = 0.03 + L * 0.85;
-      surf = 0.2;
+      surf = 0.4;
     } else if (effect == 13) { // ports : adaptateur secteur
       I = 0.03 + L * 0.3;
       surf = 0.3;
@@ -239,17 +282,17 @@ void main() {
       vec3 day = ramp(uRamp, 7.0, lp.x), night = ramp(uRamp, 1.0, (lp.x + lp.y) * 0.5);
       col = mix(night, day, L);
       I = 0.32 + 0.06 * sin(phase);
-      surf = 0.15;
+      surf = 0.35;
     } else if (effect == 15) { // réseau : scintillement selon le débit
-      float h = hash12(floor(lp * vec2(9.0, 6.0)) + floor(phase) * 3.7);
-      I = 0.04 + L * (0.25 + 1.1 * step(0.55, h));
-      surf = 0.2;
+      float sh = vnoise(lp * vec2(3.0, 2.0) + vec2(phase * 0.15, 0.0));
+      I = 0.04 + L * (0.3 + 0.9 * smoothstep(0.4, 0.9, sh));
+      surf = 0.45;
     } else {
       I = L;
     }
 
     I += hover * 0.5 + imp * 1.6;
-    float w = I * m;
+    float w = I * m * (an.w > 0.5 ? 1.0 : 1.0 - occ);
     acc += col * w;
     surfW += surf * w;
     wSum += w;
@@ -304,7 +347,7 @@ export const FS_COMP = /* glsl */ `#version 300 es
 precision highp float;
 uniform sampler2D uMaps, uField, uBloom, uRamp;
 uniform vec2 uLevels;
-uniform float uGamma, uExposure, uAmbient, uDetailK, uEdgeK, uBloomK, uGrain, uVignette, uTime, uAspect, uIn;
+uniform float uGamma, uExposure, uAmbient, uDetailK, uEdgeK, uBloomK, uGrain, uVignette, uTime, uAspect, uIn, uAurora, uMotionK;
 uniform vec4 uFan[2];     // centre (unités de largeur), rayon des ailettes, angle
 uniform vec4 uFanBlur[2]; // étendue angulaire du flou, nombre d'échantillons
 in vec2 vImg; in vec2 vScr;
@@ -318,7 +361,7 @@ vec4 maps(vec2 uv) {
     vec4 F = uFan[k];
     vec2 d = P - F.xy;
     float r = length(d);
-    if (r > F.z + 0.002) continue;
+    if (F.z <= 0.0 || r > F.z + 0.002) continue; // appareil sans ventilateur (Air)
     int n = int(uFanBlur[k].y + 0.5);
     vec4 acc = vec4(0.0);
     for (int s = 0; s < 16; s++) {
@@ -342,12 +385,22 @@ void main() {
   vec4 f = texture(uField, vScr);
   f.rgb *= uIn;
   float det = max(0.0, (m.g - 0.5) * 2.0), edge = smoothstep(0.05, 0.7, m.b);
-  float mask = uDetailK * det * 2.0 + uEdgeK * edge + f.a * (0.15 + 0.85 * lg) * 1.5;
+  // La lumière colore les surfaces (verre, métal) plus que les arêtes : moins « circuit néon ».
+  float mask = uDetailK * det * 2.0 + uEdgeK * edge + f.a * (0.3 + 0.7 * lg) * 1.7;
   vec3 em = f.rgb * mask;
   vec3 col = base + em + texture(uBloom, vScr).rgb * uBloomK;
 
+  // Aurore : deux lumières colorées très douces venues des coins, qui dérivent lentement.
+  // Elles éclairent surtout le métal (pondération par la luminance), comme un éclairage de studio.
+  float ta = uTime * 0.035 * uMotionK;
+  vec2 ca = vec2(0.10 + 0.08 * sin(ta), 0.06 + 0.06 * cos(ta * 1.3));
+  vec2 cb = vec2(0.90 + 0.06 * cos(ta * 0.9), 0.94 + 0.05 * sin(ta * 1.1));
+  vec2 da = (vScr - ca) * vec2(1.0, 0.7), db = (vScr - cb) * vec2(1.0, 0.7);
+  vec3 aur = ramp(uRamp, 0.0, 0.45) * exp(-dot(da, da) * 3.0) + ramp(uRamp, 0.0, 0.85) * exp(-dot(db, db) * 3.0);
+  col += aur * uAurora * (0.35 + 0.65 * lg);
+
   // Coude doux : les hautes lumières saturent sans écrêter brutalement.
-  vec3 k = vec3(0.8);
+  vec3 k = vec3(0.75);
   col = mix(col, k + (1.0 - k) * (1.0 - exp(-(col - k) / (1.0 - k))), step(k, col));
 
   vec2 c = vScr - 0.5;

@@ -15,7 +15,7 @@ export type ZoneKind = 'rect' | 'circle' | 'path' | 'frame';
 /** Signaux nommés produits par src/pro/signals.ts et référencés par les zones du profil. */
 export type SignalName =
   | 'cpu' | 'gpu' | 'mem' | 'fan' | 'heat' | 'exhaust' | 'power' | 'io' | 'net'
-  | 'battery' | 'activity' | 'audio' | 'ac' | 'day' | 'none';
+  | 'battery' | 'activity' | 'audio' | 'ac' | 'day' | 'soc' | 'input' | 'none';
 
 export interface CircleDef {
   /** Centre normalisé (x en largeur, y en hauteur). */
@@ -46,6 +46,12 @@ export interface ZoneDef {
   origin?: number;
   /** Trou du cadre (kind=frame). */
   inner?: NRect;
+  /** Emprunte le masque de forme d'une autre zone (ex. diffusion de chaleur limitée à la plaque). */
+  maskOf?: string;
+  /** Zone au premier plan (caloduc) : sa forme masque la lumière des zones situées dessous. */
+  above?: boolean;
+  /** Atténuation de l'intensité (1 par défaut), pour une zone parente discrète. */
+  gain?: number;
   /** Index de la cellule de batterie (ordre de remplissage). */
   cell?: number;
 }
@@ -60,6 +66,8 @@ export interface RenderSettings {
   edges: number;
   grain: number;
   vignette: number;
+  /** Lumière colorée douce venant des bords (aurore), appliquée aux surfaces métalliques. */
+  aurora?: number;
 }
 
 export interface Profile {
@@ -87,4 +95,6 @@ export interface TelemetrySnapshot {
   thermal: { pressure: number; level: string };
   audio: { playing: boolean; volume: number; muted: boolean };
   fan: { level: number; rpm: number | null; source: 'estimate' | 'smc' | 'sim' };
+  /** Secondes depuis la dernière action clavier / trackpad / souris (tout le système). */
+  input?: { idleSec: number };
 }
