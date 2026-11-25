@@ -1,0 +1,13 @@
+{
+ "size": [
+  2880,
+  1870
+ ],
+ "zones": {
+  "control_top": "{\"kind\":\"rect\",\"rect\":[0.454,0.545,0.042,0.133],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}",
+  "network_cluster": "{\"kind\":\"rect\",\"rect\":[0.361,0.424,0.074,0.126],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}",
+  "power_left": "{\"kind\":\"rect\",\"rect\":[0.147,0.462,0.492,0.589],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}",
+  "power_right": "{\"kind\":\"rect\",\"rect\":[0.613,0.891,0.492,0.589],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}",
+  "nand": "{\"kind\":\"rect\",\"rect\":[0.794,0.882,0.508,0.582],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
+ }
+}

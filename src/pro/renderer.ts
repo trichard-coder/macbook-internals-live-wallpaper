@@ -111,6 +111,10 @@ export class Renderer {
   private mapSize: [number, number] = [device().meta.size[0], device().meta.size[1]];
   private maskTex: WebGLTexture | null = null;
   private maskTexel: [number, number] = [0, 0];
+  /** Pièces des zones de carte (zones-parts.png) ; utilisées tant que ces zones n'ont pas bougé. */
+  private partsTex: WebGLTexture | null = null;
+  private partsSize: [number, number] = [1, 1];
+  private partsOn = false;
   /** Nombre de cellules de batterie (remplies l'une après l'autre). */
   private batteryCells = 1;
 
@@ -143,9 +147,23 @@ export class Renderer {
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    const { maps } = device();
-    const [lum, det, edg] = await Promise.all([loadImage(maps.lum), loadImage(maps.detail), loadImage(maps.edges)]);
+    const { maps, parts } = device();
+    const [lum, det, edg, pimg] = await Promise.all([
+      loadImage(maps.lum), loadImage(maps.detail), loadImage(maps.edges),
+      parts ? loadImage(parts.url).catch((e: Error) => { console.warn('Pièces indisponibles :', e.message); return null; }) : null,
+    ]);
     this.mapSize = [lum.naturalWidth, lum.naturalHeight];
+    if (pimg) {
+      // Codes (centres de pièces), pas des couleurs : au plus proche, sans conversion.
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+      const t = texture(gl, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, pimg);
+      gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+      this.partsTex = t;
+      this.partsSize = [pimg.naturalWidth, pimg.naturalHeight];
+    }
     this.buildMaps([lum, det, edg]);
     const mk = device().mask;
     if (mk) {
@@ -161,8 +179,8 @@ export class Renderer {
         this.maskTex = t;
         this.maskTexel = [1 / img.naturalWidth, 1 / img.naturalHeight];
       } catch (e) { console.warn('Masques de forme indisponibles :', (e as Error).message); }
-      this.buildGeometry(); // les identifiants de masque dépendent de la texture chargée
     }
+    this.buildGeometry(); // les masques et les pièces dépendent des textures chargées
     this.uploadRamp();
     this.geoDirty = true;
     this.ready = true;
@@ -190,6 +208,12 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, src[i]);
       gl.uniform1i(p.u[name], i);
     });
+    // Pièces : l'alpha des cartes vaut 0 sur le circuit imprimé nu des zones de carte.
+    const sameSize = this.partsSize[0] === w && this.partsSize[1] === h;
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.partsTex && sameSize ? this.partsTex : src[0]);
+    gl.uniform1i(p.u.uParts, 3);
+    gl.uniform1f(p.u.uHasParts, this.partsTex && sameSize ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindTexture(gl.TEXTURE_2D, tgt.tex);
@@ -248,21 +272,28 @@ export class Renderer {
     g.rect.fill(0); g.param.fill(0); g.geom.fill(0); g.seg.fill(0); g.segInfo.fill(0); g.poly.fill(0); g.mask.fill(0);
     // Masque de forme : utilisé seulement si la géométrie de la zone n'a pas changé depuis son calcul.
     const maskIdx = device().mask?.index.zones ?? {};
+    const sig = (d: ZoneDef) => JSON.stringify({ kind: d.kind, rect: d.rect, inner: d.inner ?? null, circle: d.circle ?? null, path: d.path ?? null, width: d.width ?? null, polygon: d.polygon ?? null });
     this.zones.forEach((z, i) => {
       const d = z.def.maskOf ? this.zones.find((o) => o.def.id === z.def.maskOf)?.def : z.def;
       if (!d) return;
       const m = maskIdx[d.id];
-      const geom = JSON.stringify({ kind: d.kind, rect: d.rect, inner: d.inner ?? null, circle: d.circle ?? null, path: d.path ?? null, width: d.width ?? null, polygon: d.polygon ?? null });
-      if (m && m.geom === geom && this.maskTex) g.mask[i] = m.id;
+      if (m && m.geom === sig(d) && this.maskTex) g.mask[i] = m.id;
     });
+    // Pièces : valables seulement si les zones de carte sont exactement celles du calcul.
+    const partsIdx = device().parts?.index.zones ?? {};
+    const partZones = this.zones.filter((z) => z.def.parts);
+    this.partsOn = config.parts && !!this.partsTex && partZones.length === Object.keys(partsIdx).length && partZones.every((z) => partsIdx[z.def.id] === sig(z.def));
     let seg = 0, poly = 0;
     const W = (p: NPoint): NPoint => [p[0], p[1] * ASPECT];
+    // Puce principale (première zone « chip ») : les alimentations envoient leur lumière vers elle.
+    const chip = this.zones.find((z) => z.def.effect === 'chip')?.def.rect;
+    const chipX = chip ? (chip[0] + chip[1]) / 2 : 0.5;
     this.zones.forEach((z, i) => {
       const d = z.def;
       const [x0, x1, y0, y1] = d.rect;
       g.rect.set([x0, x1, y0 * ASPECT, y1 * ASPECT], i * 4);
       let kind: number = KIND_ID[d.kind] ?? 0;
-      let aux = d.effect === 'power' ? ((x0 + x1) / 2 < 0.5 ? 1 : 0) : (d.origin ?? 0);
+      let aux = d.effect === 'power' ? ((x0 + x1) / 2 < chipX ? 0 : 1) : (d.origin ?? 0);
       if (d.kind === 'circle' && d.circle) {
         const c = W(d.circle.c);
         g.geom.set([c[0], c[1], d.circle.blades, d.circle.housing], i * 4);
@@ -545,6 +576,7 @@ export class Renderer {
       gl.uniform1f(p.u.uEdgeK, s.edges);
       gl.uniform1f(p.u.uLod, Math.log2(Math.max(1, (this.mapSize[0] * cover[0]) / field.w)));
       gl.uniform2fv(p.u.uLevels, this.levels);
+      gl.uniform1f(p.u.uHasParts, this.partsOn ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       // 3. flou séparable (trois allers-retours : halo large et diffus, lumière « studio »)
@@ -574,6 +606,9 @@ export class Renderer {
     bindTex(p, 'uField', field.tex, 1);
     bindTex(p, 'uBloom', bloomA.tex, 2);
     bindTex(p, 'uRamp', this.ramp, 3);
+    bindTex(p, 'uParts', this.partsTex ?? this.ramp, 4);
+    gl.uniform1f(p.u.uHasParts, this.partsOn ? 1 : 0);
+    gl.uniform2fv(p.u.uPartsSize, this.partsSize);
     gl.uniform2fv(p.u.uLevels, this.levels);
     gl.uniform1f(p.u.uGamma, s.gamma);
     gl.uniform1f(p.u.uExposure, s.exposure);

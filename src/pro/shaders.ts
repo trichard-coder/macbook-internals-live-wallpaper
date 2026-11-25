@@ -50,13 +50,19 @@ vec3 ramp(sampler2D r, float row, float t) {
 
 export const FS_PACK = /* glsl */ `#version 300 es
 precision highp float;
-uniform sampler2D uLum, uDetail, uEdges;
+uniform sampler2D uLum, uDetail, uEdges, uParts;
+uniform float uHasParts;
 in vec2 vScr;
 out vec4 o;
 void main() {
   // Ligne 0 du FBO = première ligne de l'image (haut) : même convention que les sources.
   vec2 uv = vScr;
-  o = vec4(texture(uLum, uv).r, texture(uDetail, uv).r, texture(uEdges, uv).r, 1.0);
+  // Alpha : surface qui reçoit la lumière. 0 sur le circuit imprimé nu d'une zone de carte (code
+  // bleu 15 de zones-parts.png), 1 ailleurs (pièces et reste de l'image). Filtré et mipmappé : le
+  // halo (bloom) suit la densité de pièces au lieu d'éclairer toute la zone.
+  float a = 1.0;
+  if (uHasParts > 0.5 && abs(texture(uParts, uv).b * 255.0 - 15.0) < 0.5) a = 0.0;
+  o = vec4(texture(uLum, uv).r, texture(uDetail, uv).r, texture(uEdges, uv).r, a);
 }`;
 
 // ------------------------------------------------------------------ champ émissif
@@ -239,10 +245,15 @@ void main() {
       col = ramp(uRamp, 3.0, clamp(L * (0.55 + 0.45 * g), 0.0, 1.0));
       I = L * g * (0.55 + 0.45 * shimmer) * 0.7;
       surf = 0.3;
-    } else if (effect == 7) { // alimentation : balayage
+    } else if (effect == 7) { // alimentation : l'énergie afflue vers la puce principale
+      // x : progression vers la puce (0 au bord opposé, 1 côté puce).
       float x = prm.w > 0.5 ? 1.0 - lp.x : lp.x;
-      float band = exp(-pow((x - fract(phase)) * 3.5, 2.0));
-      I = 0.04 + L * (0.3 + 1.1 * band * uMotion);
+      // Vagues larges et continues (cosinus : aucun saut quand un cycle recommence, contrairement à
+      // une bande qui repartait du bord), qui avancent vers la puce à la vitesse de la puissance
+      // consommée et se renforcent en l'approchant : la lumière alimente la puce.
+      float wave = pow(0.5 + 0.5 * cos(6.2832 * (x * 1.3 - phase * 0.5)), 2.0);
+      float g = mix(0.55, 1.0, smoothstep(0.0, 1.0, x));
+      I = 0.04 + L * g * (0.35 + 0.9 * wave * uMotion + 0.3 * (1.0 - uMotion));
       surf = 0.25;
     } else if (effect == 8) { // stockage : scintillement proportionnel aux E/S
       float sh = vnoise(lp * vec2(3.0, 2.0) + vec2(phase * 0.12, phase * 0.05));
@@ -257,14 +268,18 @@ void main() {
       col = an.z > 0.5 ? ramp(uRamp, 6.0, lp.x) : board;
       I = 0.03 + filled * (0.14 + 0.1 * an.z * (0.5 + 0.5 * sin(uTime * 2.0))) + line * 0.12 + flow * 0.5;
       surf = 0.3;
-    } else if (effect == 10) { // nappe : particules le long du chemin
+    } else if (effect == 10) { // nappe : flux lumineux continu le long du chemin
       float total = G.w, sn = sAlong / max(total, 1e-4);
-      // Comètes : tête lumineuse et traînée douce, sans couloirs ni barres.
-      // Nombre de comètes proportionnel à la longueur (environ 3 sur la nappe Pro, 5 sur l'Air).
-      float k = fract(sn * max(2.0, total * 14.0) - phase);
-      float part = smoothstep(0.4, 0.94, k) * smoothstep(0.4, 0.94, k) * (1.0 - smoothstep(0.94, 0.995, k)) * exp(-across * across * 1.5);
+      // Flux continu, sans paquets ni bord net : deux couches de bruit lisse glissent vers le bas à
+      // des vitesses différentes, leurs courants s'étirent et se fondent l'un dans l'autre.
+      // Échelle en longueur absolue : même rythme sur la nappe Pro (courte) et celle de l'Air.
+      float x = sAlong * 18.0;
+      float a = vnoise(vec2(x - phase * 1.4, across * 0.9 + 1.7));
+      float b = vnoise(vec2(x * 0.45 - phase * 0.8 + 5.3, across * 0.6 + 9.1));
+      float flow = smoothstep(0.25, 0.85, a * 0.6 + b * 0.4);
+      float prof = exp(-across * across * 1.3);
       col = ramp(uRamp, 0.0, 0.85 - sn * 0.7);
-      I = 0.04 + L * 0.22 + part * (0.25 + 1.1 * L) * uMotion;
+      I = 0.04 + L * 0.18 + prof * (0.06 + 0.25 * L + flow * (0.15 + 0.75 * L)) * uMotion + (1.0 - uMotion) * L * 0.3;
       surf = 0.45;
     } else if (effect == 11) { // haut-parleur : pulsation concentrique
       vec2 q = (lp - 0.5) * 2.0;
@@ -315,7 +330,7 @@ void main() {
 export const FS_BRIGHT = /* glsl */ `#version 300 es
 precision highp float;
 uniform sampler2D uMaps, uField;
-uniform float uDetailK, uEdgeK, uLod;
+uniform float uDetailK, uEdgeK, uLod, uHasParts;
 uniform vec2 uLevels;
 in vec2 vImg; in vec2 vScr;
 out vec4 o;
@@ -325,7 +340,7 @@ void main() {
   float l = clamp((m.r - uLevels.x) / (uLevels.y - uLevels.x), 0.0, 1.0);
   float det = max(0.0, (m.g - 0.5) * 2.0), edge = smoothstep(0.05, 0.7, m.b);
   float mask = uDetailK * det * 2.0 + uEdgeK * edge + f.a * (0.15 + 0.85 * l) * 1.5;
-  o = vec4(f.rgb * mask, 1.0);
+  o = vec4(f.rgb * mask * mix(1.0, m.a, uHasParts), 1.0);
 }`;
 
 export const FS_BLUR = /* glsl */ `#version 300 es
@@ -345,9 +360,10 @@ void main() {
 
 export const FS_COMP = /* glsl */ `#version 300 es
 precision highp float;
-uniform sampler2D uMaps, uField, uBloom, uRamp;
-uniform vec2 uLevels;
-uniform float uGamma, uExposure, uAmbient, uDetailK, uEdgeK, uBloomK, uGrain, uVignette, uTime, uAspect, uIn, uAurora, uMotionK;
+uniform sampler2D uMaps, uField, uBloom, uRamp, uParts;
+uniform vec2 uLevels, uPartsSize;
+uniform vec4 uCover;
+uniform float uGamma, uExposure, uAmbient, uDetailK, uEdgeK, uBloomK, uGrain, uVignette, uTime, uAspect, uIn, uAurora, uMotionK, uHasParts;
 uniform vec4 uFan[2];     // centre (unités de largeur), rayon des ailettes, angle
 uniform vec4 uFanBlur[2]; // étendue angulaire du flou, nombre d'échantillons
 in vec2 vImg; in vec2 vScr;
@@ -376,18 +392,34 @@ vec4 maps(vec2 uv) {
   return m;
 }
 
+// Pièce d'une zone de carte : la lumière est lue au centre de la pièce, qui s'allume d'un bloc
+// (une puce entière, une bille BGA) au lieu d'être traversée par un dégradé de zone.
+// Les pièces reçoivent un peu plus de lumière : le circuit nu qui les entoure n'en porte plus.
+float partGain = 1.0;
+vec2 fieldUV() {
+  if (uHasParts < 0.5) return vScr;
+  vec3 q = floor(texture(uParts, vImg).rgb * 255.0 + 0.5);
+  if (q.b < 127.5) return vScr;                         // hors pièce
+  partGain = 1.35;
+  float hi = q.b - 128.0, cxHi = mod(hi, 16.0), cyHi = floor(hi / 16.0);
+  if (cxHi > 13.5) return vScr;                         // très grande pièce : lumière lue sur place
+  vec2 c = (vec2(q.r + 256.0 * cxHi, q.g + 256.0 * cyHi) + 0.5) / uPartsSize;
+  return vScr + vec2(c.x - vImg.x, vImg.y - c.y) / uCover.xy;
+}
+
 void main() {
   vec4 m = maps(vImg);
   float l = clamp((m.r - uLevels.x) / (uLevels.y - uLevels.x), 0.0, 1.0);
   float lg = pow(l, uGamma);
   vec3 base = mix(vec3(lg), ramp(uRamp, 4.0, lg), uAmbient) * uExposure;
 
-  vec4 f = texture(uField, vScr);
+  vec4 f = texture(uField, fieldUV());
   f.rgb *= uIn;
   float det = max(0.0, (m.g - 0.5) * 2.0), edge = smoothstep(0.05, 0.7, m.b);
   // La lumière colore les surfaces (verre, métal) plus que les arêtes : moins « circuit néon ».
   float mask = uDetailK * det * 2.0 + uEdgeK * edge + f.a * (0.3 + 0.7 * lg) * 1.7;
-  vec3 em = f.rgb * mask;
+  // Circuit imprimé nu d'une zone de carte (alpha 0) : aucune lumière, seules les pièces brillent.
+  vec3 em = f.rgb * mask * mix(1.0, m.a, uHasParts) * partGain;
   vec3 col = base + em + texture(uBloom, vScr).rgb * uBloomK;
 
   // Aurore : deux lumières colorées très douces venues des coins, qui dérivent lentement.

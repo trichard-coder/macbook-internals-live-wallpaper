@@ -13,6 +13,8 @@ export interface Device {
   meta: { size: number[]; levels: { black: number; white: number } };
   /** Masques de forme calculés par scripts/build-masks.mjs (identifiants de zones par pixel). */
   mask?: { url: string; index: { size: number[]; zones: Record<string, { id: number; refine: string; geom: string }> } };
+  /** Pièces des zones de carte (scripts/build-parts.mjs) : centre de la pièce de chaque pixel. */
+  parts?: { url: string; index: { size: number[]; zones: Record<string, string> } };
   /** Zones qui s'illuminent au branchement du secteur, et zone d'où part l'onde. */
   acZones: string[];
   acRipple?: string;

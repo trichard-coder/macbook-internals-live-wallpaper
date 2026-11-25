@@ -58,6 +58,7 @@ npm run dev:pro          # serveur Vite sur http://localhost:5174/pro.html (port
 | `gamma=0.5..1.5` | surcharge du gamma du profil |
 | `motion=reduce` | force le mouvement réduit |
 | `static=1` et `level=0..1` | image figée pour les captures, toutes les zones forcées au niveau donné |
+| `parts=0` | désactive l'éclairage pièce par pièce des zones de carte (comparaison) |
 
 ## Principe du rendu
 
@@ -82,7 +83,7 @@ Le profil `profiles/pro.json` décrit chaque zone : forme (`rect`, `circle`, `pa
 | `vent_left`, `vent_right` | air chaud (chaleur x ventilation) | grilles orange puis rouge, scintillement montant |
 | `heatpipe`, `heat_link` | chaleur simulée (intégration de la charge) | flux de chaleur des puces vers les ventilateurs |
 | `heat_plate_*` | chaleur | chaleur montante |
-| `power_left`, `power_right` | puissance (SystemLoad ou tension x courant) | balayage lumineux |
+| `power_left`, `power_right` | puissance (SystemLoad ou tension x courant) | vagues d'énergie qui affluent vers la puce |
 | `nand` | E/S disque (iostat) | scintillement |
 | `bat_*` (6 cellules) | niveau de batterie (pmset) | remplissage une à une, flux en charge, rouge si faible |
 | `flex_center`, `trackpad`, `sensor_*` | activité globale | particules et lueur |
@@ -124,7 +125,7 @@ Sans ce mode, le régime est **estimé** : charge CPU + GPU lissée sur 20 s (un
 - devicePixelRatio plafonné à 2, et résolution plafonnée à celle des cartes (2880 px).
 - Au repos, le champ émissif et le bloom ne sont recalculés qu'une image sur deux.
 
-Mesures (Chrome headless, build de production, M4 Pro) : environ 7 à 9 % d'un cœur au repos à 24 i/s (dont environ 5 % pour le processus GPU de Chrome, qui présente chaque image), environ 5 % à 12 i/s, environ 3 % en mouvement réduit. Le serveur de télémétrie coûte moins de 1 %. **L'objectif de 5 % n'est donc pas atteint à 24 i/s** dans ces mesures ; l'option « Économie d'énergie » de l'application (12 i/s) s'en approche. **Mesure dans le vrai WKWebView** (application MBP Wallpaper, écran Retina 120 Hz, après le passage à 60 i/s) : environ 21 % d'un cœur au total (WebContent 5 %, processus GPU 11 %, application 5 %). C'est le prix de la fluidité ; l'option « Économie d'énergie » (12 i/s) reste disponible.
+Mesures (Chrome headless, build de production, M4 Pro) : environ 7 à 9 % d'un cœur au repos à 24 i/s (dont environ 5 % pour le processus GPU de Chrome, qui présente chaque image), environ 5 % à 12 i/s, environ 3 % en mouvement réduit. Le serveur de télémétrie coûte moins de 1 %. **L'objectif de 5 % n'est donc pas atteint à 24 i/s** dans ces mesures ; l'option « Économie d'énergie » de l'application (12 i/s) s'en approche. **Mesure dans le vrai WKWebView** (application MBP Wallpaper, écran Retina 120 Hz, après le passage à 60 i/s) : environ 21 à 27 % d'un cœur au total selon les mesures (WebContent 5 %, processus GPU 11 à 17 %, application 5 %) ; l'écart vient du processus GPU de WebKit, à code identique. C'est le prix de la fluidité ; l'option « Économie d'énergie » (12 i/s) reste disponible.
 
 ## Limites connues
 
@@ -136,7 +137,7 @@ Mesures (Chrome headless, build de production, M4 Pro) : environ 7 à 9 % d'un c
 
 ## Fichiers
 
-`pro.html`, `src/pro/` (moteur, shaders, signaux, simulation, éditeur), `profiles/pro.json`, `assets/pro/`, `scripts/prepare-pro-image.mjs`, `scripts/build-mac-pro-app.sh`, `mac-pro/`, `server/telemetry-pro.mjs`, `server/profile-pro-io.mjs`, `vite.pro.config.ts`, `tsconfig.pro.json`. Voir aussi [docs/HANDOFF-PRO.md](docs/HANDOFF-PRO.md).
+`pro.html`, `src/pro/` (moteur, shaders, signaux, simulation, éditeur), `profiles/pro.json`, `assets/pro/`, `scripts/prepare-pro-image.mjs`, `scripts/build-masks.mjs`, `scripts/build-parts.mjs`, `scripts/build-mac-pro-app.sh`, `mac-pro/`, `server/telemetry-pro.mjs`, `server/profile-pro-io.mjs`, `vite.pro.config.ts`, `tsconfig.pro.json`. Voir aussi [docs/HANDOFF-PRO.md](docs/HANDOFF-PRO.md).
 
 ## Refonte visuelle (look « graphite et aurore »)
 
@@ -144,7 +145,7 @@ Le premier rendu avait un aspect un peu rétro, « Matrix » : dominante olive, 
 
 - **Palette** : couleurs système d'Apple (corail, rose, violet, indigo, bleu, cyan), plus de jaune ni de vert phosphore ; fond graphite neutre légèrement froid.
 - **Lumière sur les surfaces** plutôt que sur les arêtes : `detail` 0,4 et `edges` 0,3 dans le profil, contribution des surfaces renforcée dans la composition ; plus de lueur ambiante teintée (`ambientGlow` à 0), qui colorait toutes les pistes.
-- **Plus de motifs numériques** : stockage et réseau miroitent doucement (bruit continu) au lieu de clignoter par blocs, plaques et batteries ondulent lentement au lieu de rayures, la nappe porte quelques comètes lumineuses au lieu de barres.
+- **Plus de motifs numériques** : stockage et réseau miroitent doucement (bruit continu) au lieu de clignoter par blocs, plaques et batteries ondulent lentement au lieu de rayures, la nappe porte un flux lumineux continu : deux couches de bruit lisse glissent vers le bas à des vitesses différentes et se fondent l'une dans l'autre, sans paquets ni bord net.
 - **Bloom plus large** (trois passes de flou) et **aurore** (`aurora` dans le profil) : deux lumières colorées très douces venues des coins, qui dérivent lentement et éclairent le métal.
 - **Grain réduit** à un simple tramage anti-bandes.
 
@@ -178,11 +179,28 @@ Les zones du profil sont des formes géométriques ; les composants réels ont d
 
 Le résultat (`assets/<appareil>/zones-mask.png`, un identifiant de zone par canal RGB, trois superpositions possibles) est lu par le shader du champ lumineux avec quatre échantillons par pixel. Un masque n'est utilisé que si la géométrie de sa zone n'a pas changé depuis son calcul : après une modification dans l'éditeur, relancez `npm run masks`. Option `--preview fichier.png` pour contrôler le découpage.
 
+## Pièces des zones de carte
+
+Une zone marquée `"parts": true` (Pro : alimentations, stockage, réseau, contrôleur ; Air : carte mère, étage d'alimentation, stockage, Wi-Fi) n'éclaire plus une surface : seules ses pièces s'allument, le circuit imprimé nu entre elles reste sombre. `scripts/build-parts.mjs` (lancé par `npm run masks`) détecte les pièces dans l'image à pleine résolution :
+
+- une pièce est ce qui dépasse nettement le fond du circuit (luminance la plus fréquente de la moitié sombre de la zone ; là où des zones se chevauchent, la plus grande impose ce seuil) ;
+- le corps d'une puce sombre est bouché (intérieur d'un contour fermé), les pistes fines sont supprimées ;
+- ne sont pas retenus : les cadres métalliques, les formes filiformes ou très allongées (bords de carte), les pièces coupées par le bord de la zone (une marge de détection garde entière une pièce dont le centre est dans la zone) ;
+- les zones non marquées qui chevauchent une zone de carte (puce principale, connecteur) gardent leur rendu.
+
+Résultat : environ 900 pièces sur la Pro, 2 000 sur l'Air, dans `assets/<appareil>/zones-parts.png` (pleine résolution, une couleur codée par pièce : coordonnées de son centre). Le moteur lit la lumière au centre de chaque pièce : une puce, une bille BGA ou une self s'allume d'un bloc, sans dégradé de zone, et les effets (vagues de l'alimentation, scintillement du stockage) passent de pièce en pièce. L'alpha des cartes vaut 0 sur le circuit nu : ni lumière ni halo n'y tombent, le halo suit la densité de pièces. Comme pour les masques, les pièces sont ignorées si une zone de carte a été modifiée dans l'éditeur depuis leur calcul (relancer `npm run masks`). Coût mesuré : nul à la précision de la mesure (même consommation avec `?parts=0`).
+
 ## Premier plan et fondus
 
 - `"above": true` (caloduc) : la forme de la zone, réelle si elle a un masque, masque la lumière des zones situées dessous. Sans cela, la lueur des boîtiers traversait le tube.
 - Les fondus sont entièrement intérieurs : la lumière s'estompe avant le bord et ne sort jamais de sa zone. Les zones qui éclairent une portion de carte (alimentation, stockage, réseau) ont un fondu large (0,022).
 - Les extrémités d'un chemin sont arrondies et dépassent de sa demi-largeur : le départ d'une nappe est reculé d'autant pour coïncider avec l'arrondi réel du câble.
+- Les nappes ont leur propre masque. En bas, la nappe Pro s'arrête net contre la barre du châssis (son extrémité arrondie, qui débordait sur la barre, est coupée par le masque) ; celle de l'Air se termine là où le câble s'estompe dans l'image, avant la petite carte de connexion.
+
+## Alimentation et nappe : des flux continus
+
+- **Alimentation** : des vagues larges partent du bord opposé et avancent vers la puce principale (sens calculé d'après la position de la puce de chaque Mac), à la vitesse de la puissance consommée, en se renforçant à son approche : la lumière alimente la puce. Ce sont des vagues continues (cosinus) : l'ancienne bande repartait du bord à chaque cycle, d'où un saut visible, amplifié par l'éclairage pièce par pièce. Les deux alimentations de la Pro envoyaient en outre leur lumière vers l'extérieur.
+- **Nappe** : un flux lumineux continu (deux couches de bruit lisse qui glissent à des vitesses différentes) remplace les comètes, dont l'avant était coupé net.
 
 ## Transitions
 

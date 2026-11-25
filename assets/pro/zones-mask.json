@@ -49,28 +49,33 @@
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.315,0.416,0.184,0.505],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
-  "trackpad": {
+  "flex_center": {
    "id": 10,
+   "refine": "fill",
+   "geom": "{\"kind\":\"path\",\"rect\":[0.4798,0.5198,0.6,0.9372],\"inner\":null,\"circle\":null,\"path\":[[0.4998,0.6308],[0.4998,0.75],[0.4998,0.9064]],\"width\":0.02,\"polygon\":null}"
+  },
+  "trackpad": {
+   "id": 11,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.42,0.58,0.957,1],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "speaker_left": {
-   "id": 11,
+   "id": 12,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.034,0.08,0.831,0.97],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "speaker_right": {
-   "id": 12,
+   "id": 13,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.92,0.966,0.831,0.97],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "sensor_right": {
-   "id": 13,
+   "id": 14,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.601,0.689,0.951,0.967],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "sensor_left": {
-   "id": 14,
+   "id": 15,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.324,0.408,0.951,0.967],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   }

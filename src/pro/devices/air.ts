@@ -5,6 +5,8 @@ import edges from '../../../assets/air/edges.webp';
 import meta from '../../../assets/air/meta.json';
 import maskUrl from '../../../assets/air/zones-mask.png';
 import maskIndex from '../../../assets/air/zones-mask.json';
+import partsUrl from '../../../assets/air/zones-parts.png';
+import partsIndex from '../../../assets/air/zones-parts.json';
 import type { Device } from '../device';
 import type { Profile } from '../types';
 
@@ -15,6 +17,7 @@ export const AIR: Device = {
   maps: { lum, detail, edges },
   meta,
   mask: { url: maskUrl, index: maskIndex },
+  parts: { url: partsUrl, index: partsIndex },
   acZones: ['ports_right'],
   acRipple: 'ports_right',
 };

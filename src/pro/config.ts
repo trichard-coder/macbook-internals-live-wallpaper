@@ -8,6 +8,7 @@
 //   ?gamma=0.5..1.5                        surcharge le gamma du profil
 //   ?static=1                              rendu figé (captures) : une seule image, pas d'animation
 //   ?level=0..1                            avec static=1 : force toutes les zones à ce niveau
+//   ?parts=0                               désactive l'éclairage pièce par pièce des zones de carte (comparaison)
 
 import { device } from './device';
 import { THEMES, type ThemeName } from './themes';
@@ -39,6 +40,7 @@ export const config = {
   gamma: num('gamma'),
   still: p.get('static') === '1',
   forceLevel: num('level'),
+  parts: p.get('parts') !== '0',
 };
 
 export function serverBase(): string {

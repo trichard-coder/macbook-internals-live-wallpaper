@@ -50,7 +50,9 @@ Les deux versions tournent sur le même moteur **WebGL2** : une seule image somb
 </tr>
 </table>
 
-**La lumière reste à sa place.** Les vrais composants ont des coins arrondis, des encoches et des contours libres : chaque zone est donc limitée à la forme réelle de sa pièce, découpée dans l'image elle-même. La lumière ne déborde jamais sur les pièces voisines. Le caloduc passe devant les boîtiers des puces et masque leur lueur, comme dans la vraie machine. [Documentation du moteur →](README-PRO.md)
+**La lumière reste à sa place.** Les vrais composants ont des coins arrondis, des encoches et des contours libres : chaque zone est donc limitée à la forme réelle de sa pièce, découpée dans l'image elle-même. La lumière ne déborde jamais sur les pièces voisines. Le caloduc passe devant les boîtiers des puces et masque leur lueur, comme dans la vraie machine.
+
+**Pièce par pièce.** Sur les cartes mères, aucune surface ne s'allume en bloc : environ 900 pièces sur la Pro et 2 000 sur l'Air (puces, billes BGA, résistances, selfs) sont détectées dans l'image, et chacune s'allume entière tandis que le circuit imprimé nu autour reste sombre. Des vagues d'énergie partent des alimentations vers la puce au rythme de la puissance mesurée, et le scintillement du stockage passe de pièce en pièce. [Documentation du moteur →](README-PRO.md)
 
 La version MacBook Air d'origine, dessinée en Canvas 2D à partir des sept calques pré-colorés par l'auteur, reste disponible en mode « classique » : [documentation →](README-AIR.md)
 
@@ -143,7 +145,7 @@ D'autres paramètres permettent de régler la cadence (`?fps=`), la résolution 
 ## État actuel, en toute transparence
 
 - ✅ Mesures réelles, réaction à la charge, thèmes, éditeur de zones, applications natives.
-- ⚠️ **Consommation** : la fluidité a un coût. Mesurée dans l'application réelle à 60 images par seconde, chaque version consomme environ 21 à 22 % d'un cœur (contenu web, processus GPU et application réunis). L'option « Économie d'énergie » du menu (12 images par seconde) ou `?quality=0.75` la réduisent nettement.
+- ⚠️ **Consommation** : la fluidité a un coût. Mesurée dans l'application réelle à 60 images par seconde, chaque version consomme environ 21 à 27 % d'un cœur selon les mesures (contenu web, processus GPU et application réunis). L'option « Économie d'énergie » du menu (12 images par seconde) ou `?quality=0.75` la réduisent nettement.
 - Testé sur un MacBook Pro 14 pouces M4 Pro sous macOS 26.
 
 ## Structure

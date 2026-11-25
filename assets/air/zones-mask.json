@@ -39,28 +39,33 @@
    "refine": "silhouette",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.387,0.613,0.688,0.918],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
-  "speaker_left": {
+  "flex_cable": {
    "id": 8,
+   "refine": "fill",
+   "geom": "{\"kind\":\"path\",\"rect\":[0.484,0.516,0.381,0.947],\"inner\":null,\"circle\":null,\"path\":[[0.5,0.4056],[0.5,0.9224]],\"width\":0.016,\"polygon\":null}"
+  },
+  "speaker_left": {
+   "id": 9,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.108,0.214,0.03,0.134],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "speaker_right": {
-   "id": 9,
+   "id": 10,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.788,0.894,0.03,0.134],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "ports_right": {
-   "id": 10,
+   "id": 11,
    "refine": "silhouette",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.966,0.992,0.061,0.323],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "memory_nand": {
-   "id": 11,
+   "id": 12,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.389,0.429,0.171,0.249],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   },
   "wifi_bt": {
-   "id": 12,
+   "id": 13,
    "refine": "fill",
    "geom": "{\"kind\":\"rect\",\"rect\":[0.601,0.649,0.128,0.18],\"inner\":null,\"circle\":null,\"path\":null,\"width\":null,\"polygon\":null}"
   }

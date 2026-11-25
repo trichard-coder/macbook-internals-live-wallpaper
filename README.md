@@ -50,7 +50,9 @@ Both versions run on the same **WebGL2** engine: a single dark image of the Mac'
 </tr>
 </table>
 
-**Light stays where it belongs.** Real components have rounded corners, notches and free-form outlines, so each zone is clipped to the actual shape of its part, cut out of the image itself. The light never spills onto neighboring parts. The heat pipe sits in front of the chip packages and hides their glow, as it does in the real machine. [Engine documentation (French) →](README-PRO.md)
+**Light stays where it belongs.** Real components have rounded corners, notches and free-form outlines, so each zone is clipped to the actual shape of its part, cut out of the image itself. The light never spills onto neighboring parts. The heat pipe sits in front of the chip packages and hides their glow, as it does in the real machine.
+
+**Part by part.** On the logic boards, no area lights up as a block: about 900 parts on the Pro and 2,000 on the Air (chips, BGA balls, resistors, inductors) are detected in the image, and each one lights up as a whole while the bare circuit board around them stays dark. Energy waves flow from the power stages toward the chip at the pace of the measured power draw, and the storage shimmer travels from part to part. [Engine documentation (French) →](README-PRO.md)
 
 The original MacBook Air version, drawn in Canvas 2D from the artist's seven pre-colored layers, is still available as a "classic" mode: [documentation (French) →](README-AIR.md)
 
@@ -143,7 +145,7 @@ Other parameters adjust the frame rate (`?fps=`), the resolution (`?quality=`) o
 ## Current status, honestly
 
 - ✅ Real measurements, reaction to load, themes, zone editor, native apps.
-- ⚠️ **Power use**: smoothness has a cost. Measured in the real app at 60 frames per second, each version uses about 21 to 22 % of one CPU core (web content, GPU process and app combined). The "Power saving" menu option (12 frames per second) or `?quality=0.75` reduce it noticeably.
+- ⚠️ **Power use**: smoothness has a cost. Measured in the real app at 60 frames per second, each version uses about 21 to 27 % of one CPU core depending on the measurement (web content, GPU process and app combined). The "Power saving" menu option (12 frames per second) or `?quality=0.75` reduce it noticeably.
 - Tested on a 14-inch MacBook Pro (M4 Pro) running macOS 26.
 
 ## Project layout

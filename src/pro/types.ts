@@ -50,6 +50,9 @@ export interface ZoneDef {
   maskOf?: string;
   /** Zone au premier plan (caloduc) : sa forme masque la lumière des zones situées dessous. */
   above?: boolean;
+  /** Zone de carte : seules ses pièces (puces, billes, résistances) s'allument, chacune d'un bloc ;
+   *  le circuit imprimé entre elles reste sombre (scripts/build-parts.mjs). */
+  parts?: boolean;
   /** Atténuation de l'intensité (1 par défaut), pour une zone parente discrète. */
   gain?: number;
   /** Index de la cellule de batterie (ordre de remplissage). */
