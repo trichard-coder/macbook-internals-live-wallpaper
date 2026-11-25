@@ -2,82 +2,84 @@
 
 # MacBook Internals · Live Wallpaper
 
-**Un fond d'écran macOS qui montre l'intérieur de votre Mac… et le fait vivre au rythme de ce qu'il fait vraiment.**
+**English** · [Français](README.fr.md)
 
-La puce s'embrase quand le processeur travaille, la batterie se remplit avec la charge, les ondes Wi-Fi suivent le débit, les ventilateurs accélèrent quand ça chauffe.
+**A macOS wallpaper that shows the inside of your Mac… and brings it to life with what your Mac is actually doing.**
 
-<img src="docs/images/air-hero.webp" alt="Version MacBook Air pendant une charge CPU : la puce passe en arc-en-ciel incandescent" width="100%">
+The chip glows when the CPU works hard, the battery fills with your charge level, Wi-Fi waves follow your throughput, and the fans spin up when things get hot.
 
-<sub>Version MacBook Air capturée pendant une vraie boucle CPU. Illustration originale : <a href="https://www.basicappleguy.com/basicappleblog/m4-macbook-air-internals-13-inch">Basic Apple Guy</a>.</sub>
+<img src="docs/images/air-hero.webp" alt="MacBook Air version under CPU load: the chip turns into a glowing rainbow" width="100%">
+
+<sub>MacBook Air version, captured during a real CPU loop. Original artwork by <a href="https://www.basicappleguy.com/basicappleblog/m4-macbook-air-internals-13-inch">Basic Apple Guy</a>.</sub>
 
 </div>
 
 ---
 
 > [!IMPORTANT]
-> **Les illustrations ne sont pas de moi.** Les magnifiques vues intérieures des MacBook sont l'œuvre de **[Basic Apple Guy](https://www.basicappleguy.com)**, qui publie depuis des années des fonds d'écran « internals » d'une précision remarquable. Tout est parti de son article **[iPhone 17 Pro Internals Wallpapers](https://basicappleguy.com/basicappleblog/iphone-17-pro-internals-wallpapers)** et de ses séries [MacBook Air 13 pouces](https://www.basicappleguy.com/basicappleblog/m4-macbook-air-internals-13-inch) et [MacBook Pro 14 et 16 pouces](https://www.basicappleguy.com/basicappleblog/macbook-pro-2025-update).
+> **The artwork is not mine.** These beautiful MacBook internals illustrations are the work of **[Basic Apple Guy](https://www.basicappleguy.com)**, who has been publishing remarkably detailed "internals" wallpapers for years. This project started from his post **[iPhone 17 Pro Internals Wallpapers](https://basicappleguy.com/basicappleblog/iphone-17-pro-internals-wallpapers)** and his [13-inch MacBook Air](https://www.basicappleguy.com/basicappleblog/m4-macbook-air-internals-13-inch) and [14 and 16-inch MacBook Pro](https://www.basicappleguy.com/basicappleblog/macbook-pro-2025-update) series.
 >
-> Ce projet n'ajoute que le code qui les anime. Si vous aimez le résultat, allez voir son blog, et **soutenez son travail** en achetant ses packs : c'est lui qui rend tout ça possible.
+> This project only adds the code that animates them. If you enjoy the result, visit his blog and **support his work** by buying his wallpaper packs: he is the one who makes all of this possible.
 
 ---
 
-## Deux Mac, deux moteurs
+## Two Macs, two engines
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
 ### MacBook Air
-<img src="docs/images/air-themes.webp" alt="Les quatre thèmes de la version Air" width="100%">
+<img src="docs/images/air-themes.webp" alt="The four themes of the Air version" width="100%">
 
-- **Canvas 2D**, sept calques pré-colorés par l'auteur
-- Chaque composant révèle sa couleur à travers un masque adouci
-- Particules sur la nappe, balayage lumineux, diffusion de chaleur
-- Pas de ventilateur, comme le vrai : la chaleur rayonne dans la plaque
+- **Canvas 2D**, seven layers pre-colored by the artist
+- Each component reveals its color through a soft-edged mask
+- Particles along the flex cable, light sweeps, heat spreading
+- No fan, just like the real one: heat radiates through the plate
 
-[Documentation détaillée →](README-AIR.md)
+[Detailed documentation (French) →](README-AIR.md)
 
 </td>
 <td width="50%" valign="top">
 
 ### MacBook Pro
-<img src="docs/pro-captures/direct-boucle-cpu.webp" alt="Version MacBook Pro pendant une charge CPU : caloduc incandescent et ventilateurs" width="100%">
+<img src="docs/pro-captures/direct-boucle-cpu.webp" alt="MacBook Pro version under CPU load: glowing heat pipe and fans" width="100%">
 
-- **WebGL2**, une seule image sombre colorisée par shaders
-- Ventilateurs qui tournent selon la charge, avec un lissage de 20 s
-- Caloduc qui chauffe depuis la puce vers les ailettes
-- Halo, scintillement, flux sur les nappes
+- **WebGL2**, a single dark image colorized by shaders
+- Fans spin with the load, smoothed over 20 seconds
+- The heat pipe warms up from the chip to the fins
+- Halos, flickering, data flowing along the flex cables
 
-[Documentation détaillée →](README-PRO.md)
+[Detailed documentation (French) →](README-PRO.md)
 
 </td>
 </tr>
 </table>
 
-## Ce qui s'allume, et pourquoi
+## What lights up, and why
 
-Tout est mesuré **localement**, en temps réel, par un petit serveur Node.js sans aucune dépendance.
+Everything is measured **locally**, in real time, by a small dependency-free Node.js server.
 
-| Composant | Ce qu'il reflète | Source macOS |
+| Component | What it reflects | macOS source |
 |---|---|---|
-| 🧠 Puce (CPU / GPU) | Charge processeur et graphique, de la teinte froide à l'incandescence | `os.cpus()`, `ps`, `ioreg IOAccelerator` |
-| 💾 Mémoire / stockage | Pression mémoire, scintillement selon les entrées / sorties disque | `vm_stat`, `iostat` |
-| ⚡ Étage d'alimentation | Puissance consommée par le système, en watts | `ioreg AppleSmartBattery` |
-| 🔋 Batteries | Niveau de charge, flux animé pendant la charge, alerte sous 20 % | `pmset -g batt` |
-| 🔥 Plaque, caloduc, ventilateurs | Pression thermique et charge soutenue | `pmset -g therm`, `notifyutil` |
-| 🔊 Haut-parleurs | Pulsation pendant la lecture audio, selon le volume | `pmset -g assertions`, `osascript` |
-| 📶 Wi-Fi / Bluetooth | Débit réseau | `netstat -ib` |
-| ⌨️ Trackpad / Taptic Engine | Votre activité au clavier et au trackpad, dans toutes les apps | `ioreg IOHIDSystem` |
-| 🔌 Ports | Branchement du secteur | `pmset`, `ioreg` |
-| 🖥️ Connecteur d'écran | Jour et nuit, selon l'heure locale | horloge |
+| 🧠 Chip (CPU / GPU) | Processor and graphics load, from a cool tint to incandescence | `os.cpus()`, `ps`, `ioreg IOAccelerator` |
+| 💾 Memory / storage | Memory pressure, flickering with disk I/O | `vm_stat`, `iostat` |
+| ⚡ Power stage | System power draw, in watts | `ioreg AppleSmartBattery` |
+| 🔋 Batteries | Charge level, animated flow while charging, alert below 20 % | `pmset -g batt` |
+| 🔥 Plate, heat pipe, fans | Thermal pressure and sustained load | `pmset -g therm`, `notifyutil` |
+| 🔊 Speakers | Pulses while audio is playing, scaled by volume | `pmset -g assertions`, `osascript` |
+| 📶 Wi-Fi / Bluetooth | Network throughput | `netstat -ib` |
+| ⌨️ Trackpad / Taptic Engine | Your keyboard and trackpad activity, in every app | `ioreg IOHIDSystem` |
+| 🔌 Ports | Power adapter plugged in | `pmset`, `ioreg` |
+| 🖥️ Display connector | Day and night, based on local time | clock |
 
-Le fond est **entièrement passif** : il ne réagit ni aux clics ni au survol. Il se contente de raconter ce que fait votre Mac.
+The wallpaper is **fully passive**: it does not react to clicks or hovering. It simply tells the story of what your Mac is doing.
 
-> Petite astuce de conception : une boucle infinie n'occupe qu'un cœur, soit 8 % de la moyenne sur une puce à 12 cœurs, noyée dans le bruit du repos. La puce surveille donc aussi le processus le plus gourmand et l'excédent par rapport à votre propre ligne de base. Résultat : `while :; do :; done` dans un Terminal suffit à l'embraser en 3 à 5 secondes.
+> A small design trick: an infinite loop only keeps one core busy, which is 8 % of the average on a 12-core chip, lost in the idle noise. So the chip also watches the busiest process and the excess load over your Mac's own baseline. As a result, running `while :; do :; done` in a Terminal is enough to make it glow within 3 to 5 seconds.
 
-## Démarrage rapide
+## Quick start
 
-Prérequis : macOS 13 ou plus récent, [Node.js](https://nodejs.org) 20 ou plus récent, et les outils en ligne de commande d'Apple (`xcode-select --install`). **Pas besoin de Xcode, ni de compte Apple, ni de droits administrateur.**
+Requirements: macOS 13 or later, [Node.js](https://nodejs.org) 20 or later, and Apple's command line tools (`xcode-select --install`). **No Xcode, no Apple ID and no admin rights needed.**
 
 ```sh
 git clone https://github.com/trichard-coder/macbook-internals-live-wallpaper.git
@@ -85,100 +87,83 @@ cd macbook-internals-live-wallpaper
 npm install
 ```
 
-**Version MacBook Air**
+**MacBook Air version**
 
 ```sh
-npm run build        # construit la page
-npm run app          # compile et installe ~/Applications/MBA Wallpaper.app
+npm run build        # builds the page
+npm run app          # compiles and installs ~/Applications/MBA Wallpaper.app
 open -a "MBA Wallpaper"
 ```
 
-**Version MacBook Pro**
+**MacBook Pro version**
 
 ```sh
 npm run build:pro
-npm run app:pro      # compile et installe ~/Applications/MBP Wallpaper.app
+npm run app:pro      # compiles and installs ~/Applications/MBP Wallpaper.app
 open -a "MBP Wallpaper"
 ```
 
-Une icône apparaît dans la barre des menus : thème, écrans, lancement à l'ouverture de session, quitter. L'application lance et surveille elle-même le serveur de télémétrie, inutile de garder un Terminal ouvert. Les deux applications se laissent la place : une seule affiche son fond à la fois.
+An icon appears in the menu bar: theme, displays, launch at login, quit. The app starts and watches the telemetry server by itself, so there is no need to keep a Terminal open. The Pro app steps aside while the Air app is running, so only one wallpaper is shown at a time.
 
 <details>
-<summary><b>Pourquoi une application maison plutôt que Plash ?</b></summary>
+<summary><b>Why a custom app instead of Plash?</b></summary>
 
 <br>
 
-[Plash](https://sindresorhus.com/plash) est l'outil classique pour afficher une page web en fond d'écran, mais il n'est distribué que sur l'App Store, ce qui exclut les Mac sans identifiant Apple (souvent les Mac professionnels). Le projet embarque donc un remplaçant minimal (`mac/main.swift`, environ 250 lignes) : une fenêtre par écran placée au niveau du bureau, sous les icônes, transparente aux clics, qui affiche la page dans un WKWebView. Elle se compile sur place avec `swiftc`.
+[Plash](https://sindresorhus.com/plash) is the usual tool for showing a web page as your wallpaper, but it is only distributed through the App Store, which rules out Macs without an Apple ID (often work computers). The project therefore ships a minimal replacement (`mac/main.swift`, about 250 lines): one window per display, placed at desktop level, below the icons and click-through, showing the page in a WKWebView. It is compiled on your Mac with `swiftc`.
 
-Si vous avez Plash, il fonctionne aussi : lancez `npm run telemetry` (Air, port 8787) ou `npm run telemetry:pro` (Pro, port 8788), puis ajoutez `http://localhost:8787/` ou `http://localhost:8788/pro.html` dans Plash.
+If you do have Plash, it works too: run `npm run telemetry` (Air, port 8787) or `npm run telemetry:pro` (Pro, port 8788), then add `http://localhost:8787/` or `http://localhost:8788/pro.html` in Plash.
 
 </details>
 
-## Thèmes et réglages
+## Themes and settings
 
-Choisissez le thème depuis le menu de l'application, ou par paramètre d'URL :
+Pick a theme from the app menu, or with a URL parameter:
 
-| Thème | Ambiance |
+| Theme | Mood |
 |---|---|
-| `rainbow` | Arc-en-ciel saturé, du froid au chaud (par défaut) |
-| `warm` | Orange, magenta et violet |
-| `sunset` | Ambre et pourpre |
-| `mono` | Aucune couleur, simple éclaircissement |
-| `auto` | `warm` le jour, `rainbow` la nuit |
+| `rainbow` | Saturated rainbow, from cool to hot (default) |
+| `warm` | Orange, magenta and purple |
+| `sunset` | Amber and crimson |
+| `mono` | No color, just brightening |
+| `auto` | `warm` during the day, `rainbow` at night |
 
-D'autres paramètres permettent de régler la cadence (`?fps=`), la résolution (`?quality=`) ou de réduire les animations (`?motion=reduce`, également activé par le réglage d'accessibilité de macOS). Le mode `?debug=1` ouvre un **éditeur de zones** pour ajuster au pixel près la position de chaque composant.
+Other parameters adjust the frame rate (`?fps=`), the resolution (`?quality=`) or reduce animations (`?motion=reduce`, also enabled by the macOS accessibility setting). The `?debug=1` mode opens a **zone editor** to fine-tune the position of each component down to the pixel.
 
-## Comment ça marche
-
-```
- commandes macOS                serveur Node.js               page web                  application native
- (ioreg, pmset, vm_stat,  ──▶   127.0.0.1, sans      ──SSE──▶  Canvas 2D (Air)    ──▶   fenêtre au niveau
-  netstat, iostat, ps...)       dépendance, 1 Hz              ou WebGL2 (Pro)           du bureau (WKWebView)
-```
-
-- **Respect de la vie privée** : le serveur n'écoute que sur `127.0.0.1` et n'accepte que les pages locales. Aucune donnée ne quitte votre Mac.
-- **Robuste** : une mesure qui échoue est remplacée par une simulation réaliste, champ par champ. Sans serveur, la page simule tout.
-- **Sobre** : seules les zones qui changent sont redessinées, la cadence s'adapte (de 6 à 60 images par seconde), et tout s'arrête quand la page est masquée.
-
-## État actuel, en toute transparence
-
-- ✅ Mesures réelles, réaction à la charge, thèmes, éditeur de zones, applications natives.
-- ⚠️ **Consommation au repos** : la version Air consomme environ 14 % d'un cœur dans l'application réelle, au-dessus de l'objectif de 5 %. La version Pro propose un mode « Économie d'énergie » à 12 images par seconde. C'est le prochain chantier ; en attendant, `?fps=12` ou `?quality=0.75` réduisent nettement la charge.
-- Testé sur un MacBook Pro 14 pouces M4 Pro sous macOS 26.
-
-## Structure
+## How it works
 
 ```
-mac/, mac-pro/            applications de fond d'écran (Swift, AppKit + WKWebView)
-server/                   serveurs de télémétrie (Node.js, sans dépendance)
-src/                      version Air (Canvas 2D)
-src/pro/                  version Pro (WebGL2)
-assets/opt/               calques Air (WebP)
-assets/pro/               image Pro et cartes dérivées
-profiles/pro.json         zones et réglages de la version Pro
-scripts/                  préparation des images, compilation des applications
-docs/                     captures
+ macOS commands                 Node.js server                web page                  native app
+ (ioreg, pmset, vm_stat,  ──▶   127.0.0.1, no        ──SSE──▶  Canvas 2D (Air)    ──▶   desktop-level window
+  netstat, iostat, ps...)       dependencies, 1 Hz            or WebGL2 (Pro)           (WKWebView)
 ```
 
-## Crédits et licence
+- **Privacy first**: the server only listens on `127.0.0.1` and only accepts local pages. No data ever leaves your Mac.
+- **Resilient**: any measurement that fails is replaced, field by field, by a realistic simulation. Without a server, the page simulates everything.
+- **Frugal**: only the zones that change are redrawn, the frame rate adapts (from 6 to 60 frames per second), and everything stops when the page is hidden.
 
-- **Illustrations** : © [Basic Apple Guy](https://www.basicappleguy.com). Elles sont reproduites ici avec attribution, uniquement pour faire fonctionner le projet, et **ne sont pas couvertes par la licence du code**. Pour les utiliser ailleurs, rendez-vous sur [son blog](https://basicappleguy.com/basicappleblog/iphone-17-pro-internals-wallpapers). Si l'auteur souhaite leur retrait, il sera fait sans discussion.
-- **Code** : licence [MIT](LICENSE).
-- Projet indépendant, sans aucun lien avec Apple Inc. MacBook, MacBook Air et MacBook Pro sont des marques d'Apple Inc.
+## Current status, honestly
 
----
+- ✅ Real measurements, reaction to load, themes, zone editor, native apps.
+- ⚠️ **Idle power use**: the Air version uses about 14 % of one CPU core in the real app, above the 5 % target. The Pro version offers a "Power saving" mode at 12 frames per second. This is the next thing to improve; in the meantime, `?fps=12` or `?quality=0.75` noticeably reduce the load.
+- Tested on a 14-inch MacBook Pro (M4 Pro) running macOS 26.
 
-<details>
-<summary><b>🇬🇧 In English</b></summary>
+## Project layout
 
-<br>
+```
+mac/, mac-pro/            wallpaper apps (Swift, AppKit + WKWebView)
+server/                   telemetry servers (Node.js, no dependencies)
+src/                      Air version (Canvas 2D)
+src/pro/                  Pro version (WebGL2)
+assets/opt/               Air layers (WebP)
+assets/pro/               Pro image and derived maps
+profiles/pro.json         zones and settings for the Pro version
+scripts/                  image preparation, app compilation
+docs/                     screenshots
+```
 
-A live macOS wallpaper that shows the inside of your MacBook and lights up each component based on what your Mac is actually doing: the chip glows with CPU / GPU load, batteries fill with your charge level, Wi-Fi waves follow network throughput, fans spin up under heat. Two versions: **MacBook Air** (Canvas 2D, seven pre-colored layers) and **MacBook Pro** (WebGL2, one image colorized by shaders, animated fans).
+## Credits and license
 
-All measurements are local, gathered by a dependency-free Node.js server bound to 127.0.0.1. A tiny native Swift app (built locally with `swiftc`, no Xcode, no Apple ID needed) pins the page to the desktop, below icons and click-through, as an alternative to Plash.
-
-**The artwork is by [Basic Apple Guy](https://www.basicappleguy.com)**, from his wonderful internals wallpaper series ([iPhone 17 Pro post](https://basicappleguy.com/basicappleblog/iphone-17-pro-internals-wallpapers)). Please visit his blog and support his work. The artwork is not covered by the MIT license of the code.
-
-Quick start: `npm install`, then `npm run build && npm run app` (Air) or `npm run build:pro && npm run app:pro` (Pro). Documentation is in French.
-
-</details>
+- **Artwork**: © [Basic Apple Guy](https://www.basicappleguy.com). It is reproduced here with attribution, only so that the project works out of the box, and it is **not covered by the code license**. To use it elsewhere, head to [his blog](https://basicappleguy.com/basicappleblog/iphone-17-pro-internals-wallpapers). If the author asks for it to be removed, it will be, no questions asked.
+- **Code**: [MIT](LICENSE) license.
+- Independent project, not affiliated with Apple Inc. in any way. MacBook, MacBook Air and MacBook Pro are trademarks of Apple Inc.
