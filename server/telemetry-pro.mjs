@@ -362,8 +362,8 @@ function tick() {
   const now = Date.now();
   runCollectors(now);
   latest = compose();
-  const payload = `data: ${JSON.stringify(latest)}\n\n`;
-  for (const res of clients) res.write(payload);
+  const payload = `data: ${JSON.stringify(latest)}\n\n`, safe = `data: ${JSON.stringify(redact(latest))}\n\n`;
+  for (const res of clients) res.write(res.redact ? safe : payload);
   if (clients.size === 0) {
     if (!idleSince) idleSince = now;
     if (now - idleSince > 10000) {
@@ -390,10 +390,19 @@ function allowedOrigin(origin) {
   if (!origin || origin === 'null') return origin ?? '*';
   return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin) ? origin : null;
 }
+// L'origine "null" n'est pas seulement celle de file:// : une page web quelconque peut la produire
+// (iframe isolée). Elle a donc droit aux mesures, sans le nom du processus actif, mais jamais à
+// l'écriture (l'éditeur, lui, tourne sur http://localhost).
+const canWrite = (origin) => origin !== 'null' && allowedOrigin(origin) !== null;
+const redact = (s) => (s?.cpu?.topProcName ? { ...s, cpu: { ...s.cpu, topProcName: undefined } } : s);
+// Nom d'hôte local exigé : bloque le « DNS rebinding » (un domaine malveillant qui pointerait vers
+// 127.0.0.1 serait sinon traité comme une page de même origine).
+const localHost = (host) => /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host ?? '');
 
 function openSse(req, res, set, onOpen) {
   const origin = allowedOrigin(req.headers.origin);
   if (origin === null) { res.writeHead(403).end(); return; }
+  res.redact = origin === 'null';
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
@@ -449,9 +458,10 @@ function readBody(req, limit = 512 * 1024) {
 const server = http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, 'http://localhost');
   const origin = allowedOrigin(req.headers.origin);
+  if (!localHost(req.headers.host)) { res.writeHead(403).end(); return; }
 
   if (req.method === 'OPTIONS') {
-    if (origin === null) { res.writeHead(403).end(); return; }
+    if (!canWrite(req.headers.origin)) { res.writeHead(403).end(); return; }
     res.writeHead(204, {
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -462,18 +472,20 @@ const server = http.createServer(async (req, res) => {
   }
   if (pathname === '/telemetry') {
     await ensureSampling();
-    openSse(req, res, clients, (r) => { if (latest) r.write(`data: ${JSON.stringify(latest)}\n\n`); });
+    openSse(req, res, clients, (r) => { if (latest) r.write(`data: ${JSON.stringify(r.redact ? redact(latest) : latest)}\n\n`); });
     return;
   }
   if (pathname === '/telemetry.json') {
+    if (origin === null) { res.writeHead(403).end(); return; }
     await ensureSampling();
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': origin ?? 'null' });
-    res.end(JSON.stringify(latest ?? compose(), null, 2));
+    const snap = latest ?? compose();
+    res.end(JSON.stringify(origin === 'null' ? redact(snap) : snap, null, 2));
     return;
   }
   const profileMatch = pathname.match(/^\/__profile-(pro|air)$/);
   if (profileMatch && req.method === 'POST') {
-    if (origin === null) { res.writeHead(403).end(); return; }
+    if (!canWrite(req.headers.origin)) { res.writeHead(403).end(); return; }
     try {
       await writeProfileFile(PROFILE_FILES[profileMatch[1]], JSON.parse(await readBody(req)));
       log(`profiles/${profileMatch[1]}.json mis à jour (relancez npm run build:${profileMatch[1]} pour le build statique)`);

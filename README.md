@@ -138,7 +138,7 @@ Other parameters adjust the frame rate (`?fps=`), the resolution (`?quality=`) o
   netstat, iostat, ps...)       dependencies, 1 Hz            air.html / pro.html       (WKWebView)
 ```
 
-- **Privacy first**: the server only listens on `127.0.0.1` and only accepts local pages. No data ever leaves your Mac.
+- **Privacy first**: the server only listens on `127.0.0.1`, only answers requests addressed to `localhost` (which blocks DNS rebinding) and only accepts local pages. Pages without an origin (`file://`) get the measurements but not the name of the busiest process, and can never change settings. No data ever leaves your Mac.
 - **Resilient**: any measurement that fails is replaced, field by field, by a realistic simulation. Without a server, the page simulates everything.
 - **Smooth**: 60 frames per second in sync with the display, and every change eases in and out (critically damped), with no sudden jumps. Everything stops when the page is hidden.
 

@@ -138,7 +138,7 @@ D'autres paramètres permettent de régler la cadence (`?fps=`), la résolution 
   netstat, iostat, ps...)       dépendance, 1 Hz              air.html / pro.html       du bureau (WKWebView)
 ```
 
-- **Respect de la vie privée** : le serveur n'écoute que sur `127.0.0.1` et n'accepte que les pages locales. Aucune donnée ne quitte votre Mac.
+- **Respect de la vie privée** : le serveur n'écoute que sur `127.0.0.1`, ne répond qu'aux requêtes adressées à `localhost` (ce qui bloque le « DNS rebinding ») et n'accepte que les pages locales. Une page sans origine (`file://`) reçoit les mesures mais pas le nom du processus le plus actif, et ne peut jamais modifier les réglages. Aucune donnée ne quitte votre Mac.
 - **Robuste** : une mesure qui échoue est remplacée par une simulation réaliste, champ par champ. Sans serveur, la page simule tout.
 - **Fluide** : 60 images par seconde en phase avec l'écran, et chaque changement accélère puis ralentit (amortissement critique), sans à-coup. Tout s'arrête quand la page est masquée.
 
