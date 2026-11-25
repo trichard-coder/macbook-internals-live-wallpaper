@@ -1,0 +1,34 @@
+{
+  "name": "macbook-internals-live-wallpaper",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Fond d'écran macOS vivant : l'intérieur du MacBook (Air et Pro) s'illumine selon l'activité réelle de la machine. Illustrations de Basic Apple Guy.",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run optimize-images && tsc --noEmit && vite build && vite build --mode single",
+    "preview": "vite preview --port 5174",
+    "telemetry": "node server/telemetry.mjs",
+    "analyze-images": "node scripts/analyze-images.mjs",
+    "optimize-images": "node scripts/optimize-images.mjs",
+    "typecheck": "tsc --noEmit",
+    "app": "sh scripts/build-mac-app.sh",
+    "prepare:pro": "node scripts/prepare-pro-image.mjs",
+    "dev:pro": "vite --config vite.pro.config.ts --port 5174 --strictPort",
+    "build:pro": "node scripts/prepare-pro-image.mjs && tsc -p tsconfig.pro.json && vite build --config vite.pro.config.ts && vite build --config vite.pro.config.ts --mode single",
+    "telemetry:pro": "node server/telemetry-pro.mjs",
+    "app:pro": "sh scripts/build-mac-pro-app.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.10",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-singlefile": "^2.3.4"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trichard-coder/macbook-internals-live-wallpaper.git"
+  }
+}

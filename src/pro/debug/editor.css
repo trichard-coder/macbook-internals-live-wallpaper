@@ -1,0 +1,86 @@
+/* Copie adaptée de src/debug/editor.css (version Air). */
+.dbg-svg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 20;
+  pointer-events: none;
+  font: 600 11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.dbg-svg.hidden { display: none; }
+.dbg-svg .shape { fill: rgba(255, 255, 255, 0.015); stroke-width: 1.2; pointer-events: all; cursor: move; }
+.dbg-svg .shape.sel { stroke-width: 2; fill: rgba(255, 255, 255, 0.05); }
+.dbg-svg text { pointer-events: none; paint-order: stroke; stroke: rgba(0, 0, 0, 0.75); stroke-width: 3px; }
+.dbg-svg .h { fill: #fff; stroke: #000; stroke-width: 1; pointer-events: all; }
+.dbg-svg .h.mid { fill: rgba(255, 255, 255, 0.45); }
+.dbg-svg .anchor { fill: none; stroke: #fff; stroke-width: 1.5; pointer-events: all; cursor: crosshair; }
+
+.dbg-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 330px;
+  z-index: 30;
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(14, 16, 22, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: #dde3ee;
+  font: 12px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  user-select: none;
+}
+.dbg-panel.hidden { display: none; }
+.dbg-panel h2 { font-size: 13px; margin: 0 0 6px; color: #fff; }
+.dbg-panel h3 { font-size: 11px; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.06em; color: #8f9bb3; }
+.dbg-panel .status { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: #9fb0c8; white-space: pre; }
+.dbg-panel .row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.dbg-panel .zone { display: grid; grid-template-columns: 14px 1fr 92px 30px; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 6px; }
+.dbg-panel .zone.sel { background: rgba(255, 255, 255, 0.08); }
+.dbg-panel .zone .name { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dbg-panel .zone .swatch { width: 10px; height: 10px; border-radius: 3px; }
+.dbg-panel .zone output { font: 10px ui-monospace, Menlo, monospace; color: #9fb0c8; text-align: right; }
+.dbg-panel input[type="range"] { width: 100%; accent-color: #7cc4ff; }
+.dbg-panel button, .dbg-panel select {
+  font: inherit;
+  color: #e8eef8;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.dbg-panel button:hover { background: rgba(255, 255, 255, 0.16); }
+.dbg-panel .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.dbg-panel .hint { color: #7d889c; font-size: 11px; margin-top: 8px; }
+.dbg-panel .sel-info { font: 11px ui-monospace, Menlo, monospace; color: #b8c6dc; }
+.dbg-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(20, 24, 32, 0.92);
+  color: #fff;
+  font: 12px -apple-system, system-ui, sans-serif;
+  pointer-events: none;
+}
+
+/* Ajouts Pro : guides des cercles, chemins, cadres et curseurs de rendu */
+.dbg-svg .guide { fill: none; stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.7; pointer-events: none; }
+.dbg-svg .guide.wide { stroke-dasharray: none; opacity: 0.18; stroke-linecap: round; stroke-linejoin: round; }
+.dbg-svg .shape.path { fill: none; stroke-width: 2; }
+.dbg-svg circle.shape { fill: rgba(255, 255, 255, 0.015); }
+.dbg-svg .h.inner { fill: #ffd43b; }
+.dbg-svg .h.center { fill: #fff; pointer-events: none; }
+.dbg-panel .slider { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 6px; margin: 2px 0; }
+.dbg-panel .slider output { font: 10px ui-monospace, Menlo, monospace; color: #9fb0c8; text-align: right; }
+.dbg-panel .narr { display: flex; align-items: center; gap: 4px; color: #9fb0c8; }
+.dbg-panel .grow { flex: 1; display: flex; align-items: center; gap: 4px; }
+.dbg-panel .sel-info { white-space: pre-wrap; }

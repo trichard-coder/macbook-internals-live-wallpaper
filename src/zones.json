@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "image": { "width": 2560, "height": 1664 },
+  "zones": [
+    { "id": "logic_board", "label": "Carte logique", "rect": [0.34, 0.664, 0.1, 0.381], "feather": 0.01 },
+    { "id": "thermal_plate", "label": "Plaque thermique", "rect": [0.015, 0.336, 0.139, 0.375], "feather": 0.014 },
+    { "id": "power_stage", "label": "Étage d'alimentation", "rect": [0.672, 0.962, 0.145, 0.372], "feather": 0.01 },
+    { "id": "soc", "label": "Puce (CPU / GPU)", "rect": [0.481, 0.578, 0.206, 0.331], "feather": 0.008, "anchor": [0.5295, 0.2855], "core": [0.484, 0.575, 0.243, 0.328] },
+    { "id": "memory_nand", "label": "Mémoire / stockage", "rect": [0.389, 0.429, 0.171, 0.249], "feather": 0.006 },
+    { "id": "wifi_bt", "label": "Wi-Fi / Bluetooth", "rect": [0.601, 0.649, 0.128, 0.18], "feather": 0.006, "anchor": [0.625, 0.154] },
+    { "id": "speaker_left", "label": "Haut-parleur gauche", "rect": [0.046, 0.21, 0.026, 0.158], "feather": 0.008, "anchor": [0.161, 0.082] },
+    { "id": "speaker_right", "label": "Haut-parleur droit", "rect": [0.79, 0.954, 0.026, 0.136], "feather": 0.008, "anchor": [0.841, 0.082] },
+    { "id": "battery_top", "label": "Batterie (cellule haute)", "rect": [0.019, 0.981, 0.42, 0.656], "feather": 0.008 },
+    { "id": "battery_bl", "label": "Batterie (cellule bas gauche)", "rect": [0.02, 0.29, 0.667, 0.947], "feather": 0.008 },
+    { "id": "battery_br", "label": "Batterie (cellule bas droite)", "rect": [0.71, 0.981, 0.667, 0.947], "feather": 0.008 },
+    { "id": "trackpad_taptic", "label": "Trackpad / Taptic Engine", "rect": [0.387, 0.613, 0.688, 0.918], "feather": 0.008, "anchor": [0.5, 0.846] },
+    { "id": "flex_cable", "label": "Nappe centrale", "rect": [0.481, 0.519, 0.381, 0.957], "feather": 0.004 },
+    { "id": "display_connector", "label": "Connecteur d'écran", "rect": [0.431, 0.569, 0.032, 0.103], "feather": 0.006 },
+    { "id": "ports_right", "label": "Ports USB-C / MagSafe", "rect": [0.966, 0.992, 0.061, 0.323], "feather": 0.005 }
+  ]
+}

@@ -1,0 +1,6 @@
+node_modules/
+dist/
+dist-*/
+assets/analysis/
+assets/src/
+.DS_Store
